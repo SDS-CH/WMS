@@ -42,13 +42,13 @@ const DB = {
   //            category affinity and (optional) owningClient. Renaming/restructuring `levels`
   //            never affects areas.
   sites: [
-    { id: 'S-LYON',  name: 'Lyon DC',    city:'Lyon',  country:'France', type:'Distribution Centre', status:'active',
+    { id: 'S-LYON',  name: 'Luanda',     city:'Luanda', country:'Angola', type:'Distribution Centre', status:'active',
       levels:['Floor','Zone','Aisle','Rack','Bin'],
       areas:[
         { code:'A', name:'Area A — Ambient',    preferredCategories:['CAT-FB'],     preferredSubCategories:['SUB-OIL','SUB-DRY'], owningClient:'' },
         { code:'B', name:'Area B — Cold chain', preferredCategories:['CAT-PHARMA'], preferredSubCategories:['SUB-VAX'],           owningClient:'C-GLBX' },
       ] },
-    { id: 'S-PARIS', name: 'Paris Hub',  city:'Paris', country:'France', type:'Cross-dock Hub',       status:'active',
+    { id: 'S-PARIS', name: 'Soyo',       city:'Soyo',  country:'Angola', type:'Cross-dock Hub',       status:'active',
       levels:['Zone','Aisle'],
       areas:[
         { code:'C', name:'Area C — Cross-dock', preferredCategories:[], preferredSubCategories:[], owningClient:'' },
@@ -184,7 +184,7 @@ const DB = {
     // held for inspection at receipt (operator flagged "Hold for inspection") — these are the Inspection worklist's Pending items
     { id: 'LPN-00014', client:'C-ACME', site:'S-LYON', product:'P-1001', qty:60,  lot:'L240210', expiry:'2026-07-05', serials:[],              status:'to-inspect', loc:'LOC-WAIT-01' },
     { id: 'LPN-00015', client:'C-GLBX', site:'S-LYON', product:'P-2001', qty:20,  lot:'VX-90',   expiry:'2026-09-01', serials:['SN-201…220'], status:'to-inspect', loc:'LOC-WAIT-01' },
-    // In transit on an inter-site transfer (TRF-8001, Lyon→Paris) — left Lyon, not yet received at Paris.
+    // In transit on an inter-site transfer (TRF-8001, Luanda→Soyo) — left Luanda, not yet received at Soyo.
     { id: 'LPN-00030', client:'C-ACME', site:'S-LYON', product:'P-1002', qty:100, lot:'',        expiry:'',           serials:[],              status:'in-transit', loc:'LOC-DISP-01' },
     // Repack history (RPK-7000): a 240-unit pasta plate split into two 120s. Source consumed; two outputs available.
     { id: 'LPN-00050', client:'C-ACME', site:'S-LYON', product:'P-1002', qty:0,   lot:'',        expiry:'',           serials:[],              status:'consumed',   loc:'LOC-A0203' },
@@ -488,9 +488,9 @@ const DB = {
   // label kept in sync for the Users & Roles list. firstName/lastName/username feed the mapping grid columns.
   users: [
     { id:'U-001', name:'Alice Bernard', firstName:'Alice', lastName:'Bernard', username:'abernard', email:'alice@op.example', role:'Administrator', sites:'All sites',  clients:'All clients',    allClients:true,  clientIds:[],         status:'active' },
-    { id:'U-002', name:'Benjamin Felix',  firstName:'Benjamin', lastName:'Felix',  username:'bfelix',  email:'benjamin@op.example', role:'Supervisor',    sites:'Lyon DC',    clients:'All clients',    allClients:true,  clientIds:[],         status:'active' },
-    { id:'U-003', name:'Samer Merhi',  firstName:'Samer',  lastName:'Merhi', username:'smerhi', email:'samer@op.example',  role:'Operator',      sites:'Lyon DC',    clients:'ACME Foods Ltd', allClients:false, clientIds:['C-ACME'], status:'active' },
-    { id:'U-004', name:'Nicolas Masserey',     firstName:'Nicolas',   lastName:'Masserey',   username:'nmasserey',   email:'nicolas@op.example',   role:'Operator',      sites:'Paris Hub',  clients:'Globex Pharma',  allClients:false, clientIds:['C-GLBX'], status:'active' },
+    { id:'U-002', name:'Benjamin Felix',  firstName:'Benjamin', lastName:'Felix',  username:'bfelix',  email:'benjamin@op.example', role:'Supervisor',    sites:'Luanda',     clients:'All clients',    allClients:true,  clientIds:[],         status:'active' },
+    { id:'U-003', name:'Samer Merhi',  firstName:'Samer',  lastName:'Merhi', username:'smerhi', email:'samer@op.example',  role:'Operator',      sites:'Luanda',     clients:'ACME Foods Ltd', allClients:false, clientIds:['C-ACME'], status:'active' },
+    { id:'U-004', name:'Nicolas Masserey',     firstName:'Nicolas',   lastName:'Masserey',   username:'nmasserey',   email:'nicolas@op.example',   role:'Operator',      sites:'Soyo',       clients:'Globex Pharma',  allClients:false, clientIds:['C-GLBX'], status:'active' },
     { id:'U-005', name:'Sara Conti',    firstName:'Sara',  lastName:'Conti',   username:'sconti',   email:'sara@op.example',  role:'Operator',      sites:'All sites',  clients:'All clients',    allClients:true,  clientIds:[],         status:'inactive' },
   ],
 
@@ -1059,7 +1059,7 @@ function putawayReject(lpnId, rejectQty, opts){
   res.goodId = l.id; res.rejectedId = rid; return res;
 }
 
-// Seed one demo mixed pallet at Lyon staging (ACME) so Putaway can be demoed even before building one in Receive.
+// Seed one demo mixed pallet at Luanda staging (ACME) so Putaway can be demoed even before building one in Receive.
 if (!DB.pallets.length) DB.pallets.push({
   id:'PLT-00001', client:'C-ACME', site:'S-LYON', status:'to-putaway', loc:'LOC-WAIT-01',
   lines:[
@@ -1084,7 +1084,7 @@ function lpnPutawayProgress(lpnId){
   return { placed, remaining, original: placed+remaining, placements };
 }
 
-// Seed two IN-PROGRESS demos (ACME / Lyon) so the partial-progress UX shows on load:
+// Seed two IN-PROGRESS demos (ACME / Luanda) so the partial-progress UX shows on load:
 //   (1) a single plate part-put-away: LPN-00120 (20 left) + already-placed child LPN-00121 (80 @ a bin);
 //   (2) a part-decomposed pallet PLT-00003: one line already placed (child LPN-00122), two lines still open.
 if (!lpnById('LPN-00120')){
@@ -1445,4 +1445,166 @@ if (!DB.rtvs.length) DB.rtvs.push(
   setDoc('asns','ASN-3101','U-003');
   // LPN/pallet-backed queues (putaway = to-putaway plates; inspect = to-inspect plates)
   setLpn('LPN-00101','U-003'); setLpn('LPN-00102','U-002');
+}());
+
+/* ============================================================
+   OIL & GAS CLIENTS (3PL) — added seed block.
+   Three industrial clients (Technip Energies, Schlumberger, Yinson) operating out of the
+   EXISTING Luanda DC (S-LYON) — NO new site (per the build decision: reuse Luanda). Adds: a global
+   Oil & Gas product category; a dedicated heavy-duty storage Area D + its bins at Luanda (rig
+   equipment is far heavier than the FMCG that Areas A/B are weight-capped for — a gate valve is
+   85 kg, a barite pallet ~5 t — so O&G stock homes to Area D, leaving the food/cold-chain
+   capacity demos intact); suppliers/carrier/consignees; products that exercise the tracking
+   flags realistically (bulk fasteners/gaskets = none; pipe/flange = lot/heat-number;
+   equipment = serial; drilling/cementing chemicals = lot+expiry); and a full
+   receive -> putaway -> stock-out chain (ASNs incl. a partial, to-putaway + available LPNs incl.
+   an expired chemical + a to-inspect + a damaged plate, and outbound orders incl. a SHORT-CLOSE
+   and a BACK-ORDER). Segregation stays OFF globally; Area D.owningClient is '' (shared while OFF).
+   Idempotent: guarded on C-TCHP so a re-eval / hydrated PWA snapshot won't duplicate.
+   ============================================================ */
+(function seedOilAndGas(){
+  if (DB.clients.some(c=>c.id==='C-TCHP')) return;   // already seeded
+
+  // --- Global product category (joins the existing food/pharma taxonomy; catName/subCatName read it) ---
+  DB.categories.push(
+    { id:'CAT-OG', name:'Oil & Gas Equipment', subs:[
+      { id:'SUB-RIG',   name:'Rig Construction & Structural' },
+      { id:'SUB-VALVE', name:'Valves & Flow Control' },
+      { id:'SUB-DRILL', name:'Drilling Tools & Equipment' },
+      { id:'SUB-CHEM',  name:'Drilling & Cementing Chemicals' },
+      { id:'SUB-ROT',   name:'Rotating & Marine Equipment' },
+    ]}
+  );
+
+  // --- New heavy-duty storage AREA at the existing Luanda DC (decoupled from the addressing path). ---
+  const lyon = DB.sites.find(s=>s.id==='S-LYON');
+  if (lyon && !lyon.areas.some(a=>a.code==='D')) lyon.areas.push(
+    { code:'D', name:'Area D — Industrial / Oil & Gas', preferredCategories:['CAT-OG'],
+      preferredSubCategories:['SUB-RIG','SUB-VALVE','SUB-DRILL','SUB-CHEM','SUB-ROT'], owningClient:'' }
+  );
+
+  // --- Heavy-capacity storage bins in Area D (high maxWeightKg for rig equipment / chemical pallets). ---
+  DB.locations.push(
+    { id:'LOC-D01', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B01'}, structured:'1-D-01-R1-B01', userRef:'Heavy rack — valves',    status:'active', maxWeightKg:15000, maxUnits:3000, maxLpns:15 },
+    { id:'LOC-D02', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B02'}, structured:'1-D-01-R1-B02', userRef:'Bulk fasteners',         status:'active', maxWeightKg:10000, maxUnits:4000, maxLpns:12 },
+    { id:'LOC-D03', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'02',Rack:'R1',Bin:'B01'}, structured:'1-D-02-R1-B01', userRef:'Drilling tools',         status:'active', maxWeightKg:8000,  maxUnits:2000, maxLpns:10 },
+    { id:'LOC-D04', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'02',Rack:'R1',Bin:'B02'}, structured:'1-D-02-R1-B02', userRef:'Chemicals & consumables', status:'active', maxWeightKg:12000, maxUnits:5000, maxLpns:12 }
+  );
+
+  // --- Clients (owners of the stock; 3PL — operator never owns it). Mix of remainder policy. ---
+  DB.clients.push(
+    { id:'C-TCHP', name:'Technip Energies', legal:'Technip Energies N.V.',
+      contact:'Élodie Garnier', email:'logistics@technipenergies.example', phone:'+33 1 47 78 0100',
+      country:'France', status:'active', sites:['S-LYON'], allowBackorder:true },
+    { id:'C-SLB', name:'Schlumberger', legal:'Schlumberger Limited (SLB)',
+      contact:'Raj Patel', email:'supplychain@slb.example', phone:'+33 1 40 62 0200',
+      country:'France', status:'active', sites:['S-LYON'], allowBackorder:false },
+    { id:'C-YIN', name:'Yinson', legal:'Yinson Holdings Berhad',
+      contact:'Tan Wei Ling', email:'ops@yinson.example', phone:'+60 3 2300 0300',
+      country:'Malaysia', status:'active', sites:['S-LYON'], allowBackorder:true }
+  );
+
+  // --- Suppliers (GLOBAL master — inbound source on an ASN header). ---
+  DB.suppliers.push(
+    { id:'SUP-300', name:'Vallourec Tubes',      contact:'Pierre Lemoine', email:'export@vallourec.example', phone:'+33 1 49 09 0300', country:'France',        status:'active' },
+    { id:'SUP-400', name:'NOV Inc.',             contact:'Mary Sullivan',  email:'orders@nov.example',       phone:'+1 713 555 0400',  country:'United States', status:'active' },
+    { id:'SUP-500', name:'Cameron Flow Control', contact:'James Okoro',    email:'sales@cameron.example',    phone:'+1 281 555 0500',  country:'United States', status:'active' }
+  );
+
+  // --- Carrier (GLOBAL master — heavy-haul / project logistics for outbound dispatch). ---
+  DB.carriers.push(
+    { id:'CAR-HLT', name:'Heavy-Lift Project Logistics', scac:'HLPL', mode:'Road · Heavy haul', contact:'Project desk', phone:'+33 4 555 0600', status:'active' }
+  );
+
+  // --- Consignees (CLIENT-scoped ship-to points — yards / field bases / offshore supply bases). ---
+  DB.consignees.push(
+    { id:'CNE-TQ01', client:'C-TCHP', name:'Technip Fabrication Yard — Le Trait', address:'Quai de Seine',             city:'Le Trait',          country:'France',         contact:'Yard goods-in',         phone:'+33 2 555 0701',  status:'active' },
+    { id:'CNE-TQ02', client:'C-TCHP', name:'Offshore Supply Base — Fos',          address:'Darse 2, Port de Fos',      city:'Fos-sur-Mer',       country:'France',         contact:'Quayside ops',          phone:'+33 4 555 0702',  status:'active' },
+    { id:'CNE-SB01', client:'C-SLB',  name:'SLB Field Base — Lacq',               address:'Zone Industrielle',         city:'Lacq',              country:'France',         contact:'Base store',            phone:'+33 5 555 0703',  status:'active' },
+    { id:'CNE-SB02', client:'C-SLB',  name:'Rig 12 — North Sea Wellsite',         address:'Block 22/4 — via Aberdeen', city:'Aberdeen',          country:'United Kingdom', contact:'Materials coordinator', phone:'+44 1224 555 0704', status:'active' },
+    { id:'CNE-YN01', client:'C-YIN',  name:'FPSO Anna Nery — Marine Base',        address:'Porto do Açu',              city:'São João da Barra', country:'Brazil',         contact:'Marine logistics',      phone:'+55 22 555 0705', status:'active' },
+    { id:'CNE-YN02', client:'C-YIN',  name:'Yinson Yard — Singapore',             address:'Tuas South Ave',            city:'Singapore',         country:'Singapore',      contact:'Yard receiving',        phone:'+65 6555 0706',   status:'active' }
+  );
+
+  // --- Products (client-scoped). Tracking profile mirrors real O&G material control:
+  //     fasteners/gaskets = none; pipe/flange = lot (heat number); equipment = serial; chemicals = lot+expiry. ---
+  DB.products.push(
+    // Technip Energies — rig construction & structural
+    { id:'P-TQ01', client:'C-TCHP', sku:'BOLT-M20-120', name:'Hex Bolt M20×120 Gr 8.8 (galv)',   uom:'each', barcode:'6021000000011', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:0.35, preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-TQ02', client:'C-TCHP', sku:'FLG-6-900',    name:'Weld-Neck Flange 6" 900# A105',     uom:'each', barcode:'6021000000028', track:{lot:true,expiry:false,serial:false},  category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:12,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-TQ03', client:'C-TCHP', sku:'GV-6-900',     name:'Gate Valve 6" 900# (trunnion)',     uom:'each', barcode:'6021000000035', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-VALVE', weightKg:85,   preferred:[{site:'S-LYON',mode:'location',ref:'LOC-D01'}] },
+    { id:'P-TQ04', client:'C-TCHP', sku:'RJG-R46',      name:'Ring-Joint Gasket R-46 (Inconel)',  uom:'each', barcode:'6021000000042', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:0.4,  preferred:[] },
+    // Schlumberger — oilfield services
+    { id:'P-SB01', client:'C-SLB',  sku:'BIT-PDC-8.5',  name:'PDC Drill Bit 8½"',                 uom:'each', barcode:'6022000000010', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-DRILL', weightKg:45,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-SB02', client:'C-SLB',  sku:'BARITE-25',    name:'Drilling Mud Barite (25 kg bag)',   uom:'bag',  barcode:'6022000000027', track:{lot:true,expiry:false,serial:false},  category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:25,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-SB03', client:'C-SLB',  sku:'MWD-SUB',      name:'MWD Sensor Sub',                    uom:'each', barcode:'6022000000034', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-DRILL', weightKg:60,   preferred:[] },
+    { id:'P-SB04', client:'C-SLB',  sku:'CEM-RET-20',   name:'Cement Retarder Additive (20 kg)',  uom:'bag',  barcode:'6022000000041', track:{lot:true,expiry:true,serial:false},   category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:20,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    // Yinson — FPSO / marine
+    { id:'P-YN01', client:'C-YIN',  sku:'IMP-CRNI',     name:'Centrifugal Pump Impeller (CrNi)',  uom:'each', barcode:'6023000000019', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-ROT',   weightKg:28,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-YN02', client:'C-YIN',  sku:'HOSE-1-10M',   name:'Hydraulic Hose Assembly 1" (10 m)', uom:'each', barcode:'6023000000026', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-ROT',   weightKg:6,    preferred:[] },
+    { id:'P-YN03', client:'C-YIN',  sku:'GKT-MAR-SET',  name:'Marine Gasket Set (topside)',       uom:'each', barcode:'6023000000033', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:1.2,  preferred:[] },
+    { id:'P-YN04', client:'C-YIN',  sku:'CV-2',         name:'Topside Control Valve 2"',          uom:'each', barcode:'6023000000040', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-VALVE', weightKg:22,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] }
+  );
+
+  // --- LPNs: available stock (Area D) + to-putaway (inbound staging) + an expired chemical + a to-inspect + a damaged.
+  //     Serial-tracked plates carry a range token whose expanded count == qty (validateSerials checks this on issue). ---
+  DB.lpns.push(
+    // Technip Energies
+    { id:'LPN-00200', client:'C-TCHP', site:'S-LYON', product:'P-TQ01', qty:1000, lot:'',        expiry:'', serials:[],                 status:'available',  loc:'LOC-D02' },
+    { id:'LPN-00201', client:'C-TCHP', site:'S-LYON', product:'P-TQ02', qty:24,   lot:'HT-7741', expiry:'', serials:[],                 status:'available',  loc:'LOC-D01' },
+    { id:'LPN-00202', client:'C-TCHP', site:'S-LYON', product:'P-TQ03', qty:6,    lot:'',        expiry:'', serials:['GV6-0001…0006'], status:'available',  loc:'LOC-D01' },
+    { id:'LPN-00203', client:'C-TCHP', site:'S-LYON', product:'P-TQ01', qty:500,  lot:'',        expiry:'', serials:[],                 status:'to-putaway', loc:'LOC-WAIT-01' },
+    { id:'LPN-00204', client:'C-TCHP', site:'S-LYON', product:'P-TQ04', qty:200,  lot:'',        expiry:'', serials:[],                 status:'to-putaway', loc:'LOC-WAIT-01' },
+    // Schlumberger
+    { id:'LPN-00210', client:'C-SLB',  site:'S-LYON', product:'P-SB01', qty:8,    lot:'',        expiry:'',           serials:['BIT-0001…0008'], status:'available',  loc:'LOC-D03' },
+    { id:'LPN-00211', client:'C-SLB',  site:'S-LYON', product:'P-SB02', qty:200,  lot:'BAR-2405', expiry:'',          serials:[],                status:'available',  loc:'LOC-D04' },
+    { id:'LPN-00212', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:100,  lot:'CEM-2403', expiry:'2027-02-28', serials:[],                status:'available',  loc:'LOC-D04' },
+    // expired chemical demo (expiry < WMS_TODAY 2026-06-15): physically present + 'available' but excluded from FEFO/issue.
+    { id:'LPN-00215', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:20,   lot:'CEM-2208', expiry:'2026-05-31', serials:[],                status:'available',  loc:'LOC-D04' },
+    { id:'LPN-00213', client:'C-SLB',  site:'S-LYON', product:'P-SB03', qty:4,    lot:'',        expiry:'',           serials:['MWD-0001…0004'], status:'to-putaway', loc:'LOC-WAIT-01' },
+    { id:'LPN-00214', client:'C-SLB',  site:'S-LYON', product:'P-SB02', qty:120,  lot:'BAR-2406', expiry:'',          serials:[],                status:'to-putaway', loc:'LOC-WAIT-01' },
+    // Yinson
+    { id:'LPN-00220', client:'C-YIN',  site:'S-LYON', product:'P-YN01', qty:10,   lot:'', expiry:'', serials:['IMP-0001…0010'], status:'available',  loc:'LOC-D03' },
+    { id:'LPN-00221', client:'C-YIN',  site:'S-LYON', product:'P-YN02', qty:50,   lot:'', expiry:'', serials:[],                status:'available',  loc:'LOC-D02' },
+    { id:'LPN-00222', client:'C-YIN',  site:'S-LYON', product:'P-YN04', qty:12,   lot:'', expiry:'', serials:['CV2-0001…0012'], status:'available',  loc:'LOC-D01' },
+    { id:'LPN-00223', client:'C-YIN',  site:'S-LYON', product:'P-YN03', qty:80,   lot:'', expiry:'', serials:[],                status:'to-putaway', loc:'LOC-WAIT-01' },
+    { id:'LPN-00224', client:'C-YIN',  site:'S-LYON', product:'P-YN01', qty:6,    lot:'', expiry:'', serials:['IMP-0101…0106'], status:'to-inspect', loc:'LOC-WAIT-01' },
+    { id:'LPN-00225', client:'C-YIN',  site:'S-LYON', product:'P-YN02', qty:5,    lot:'', expiry:'', serials:[],                status:'damaged',    loc:'LOC-QUAR-01' }
+  );
+
+  // --- ASNs (inbound advance ship notices): open + a partial (status DERIVED via asnStatus). ---
+  DB.asns.push(
+    { id:'ASN-3201', client:'C-TCHP', site:'S-LYON', supplier:'SUP-300', lines:[
+        { product:'P-TQ02', qty:50, received:0 }, { product:'P-TQ03', qty:6, received:0 } ] },
+    { id:'ASN-3202', client:'C-SLB',  site:'S-LYON', supplier:'SUP-400', lines:[
+        { product:'P-SB01', qty:8, received:8 }, { product:'P-SB02', qty:400, received:200 } ] },   // -> partial
+    { id:'ASN-3203', client:'C-YIN',  site:'S-LYON', supplier:'SUP-500', lines:[
+        { product:'P-YN04', qty:12, received:0 }, { product:'P-YN01', qty:10, received:0 } ] },
+    { id:'ASN-3204', client:'C-TCHP', site:'S-LYON', supplier:'SUP-300', lines:[
+        { product:'P-TQ01', qty:1000, received:0 } ] }
+  );
+
+  // --- Outbound orders: a simple pick, a serial pick, a pre-allocated order, a SHORT-CLOSE (SLB) and a BACK-ORDER (Technip). ---
+  DB.outbound.push(
+    { id:'OUT-7201', client:'C-TCHP', site:'S-LYON', shipTo:'CNE-TQ01', ref:'PO-TCHP-001', created:'2026-06-18',
+      status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-TQ01', qty:600, shipped:0, alloc:[] } ] },
+    { id:'OUT-7202', client:'C-SLB',  site:'S-LYON', shipTo:'CNE-SB02', ref:'PO-SLB-118', created:'2026-06-18',
+      status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-SB01', qty:3, shipped:0, alloc:[] } ] },
+    { id:'OUT-7203', client:'C-YIN',  site:'S-LYON', shipTo:'CNE-YN01', ref:'PO-YIN-204', created:'2026-06-17',
+      status:'allocated', fullStockOut:false, shipments:[], lines:[
+        { product:'P-YN01', qty:4, shipped:0, alloc:[ { lpn:'LPN-00220', lot:'', expiry:'', from:'LOC-D03', qty:4, picked:0, serials:'IMP-0001…0004' } ] } ] },
+    // SLB allowBackorder=false: orders 500 barite, only 200 available (LPN-00214's 120 is still to-putaway) -> SHORT-CLOSE demo.
+    { id:'OUT-7204', client:'C-SLB',  site:'S-LYON', shipTo:'CNE-SB01', ref:'PO-SLB-120', created:'2026-06-18',
+      status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-SB02', qty:500, shipped:0, alloc:[] } ] },
+    // Technip allowBackorder=true: orders 40 flanges, only 24 available -> BACK-ORDER demo (16 stays open).
+    { id:'OUT-7205', client:'C-TCHP', site:'S-LYON', shipTo:'CNE-TQ02', ref:'PO-TCHP-002', created:'2026-06-18',
+      status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-TQ02', qty:40, shipped:0, alloc:[] } ] }
+  );
+
+  // --- A few audit txns so Reports show O&G history (a receive + putaway pair, and the SLB partial receive). ---
+  DB.txns.push(
+    { id:'TXN-1101', ts:'2026-06-17 08:30', type:'receive', lpn:'LPN-00210', product:'P-SB01', qty:8,   from:'',            to:'LOC-WAIT-01', site:'S-LYON', user:'Benjamin Felix', ref:'GRN-4201', note:'Drill bits received (SLB)' },
+    { id:'TXN-1102', ts:'2026-06-17 10:15', type:'putaway', lpn:'LPN-00210', product:'P-SB01', qty:8,   from:'LOC-WAIT-01', to:'LOC-D03',     site:'S-LYON', user:'Samer Merhi',    ref:'',         note:'Directed putaway (Area D)' },
+    { id:'TXN-1103', ts:'2026-06-17 11:40', type:'receive', lpn:'LPN-00211', product:'P-SB02', qty:200, from:'',            to:'LOC-D04',     site:'S-LYON', user:'Samer Merhi',    ref:'GRN-4202', note:'Barite partial receipt (200/400)' }
+  );
 }());
