@@ -74,8 +74,11 @@ operator's balance sheet; the system tracks traceability, location, and accounta
   Move, Transfer-receive, Returns direct-restock; (3) **serials required on every issue path** (classic Dispatch
   + Express Fulfil). Seed stock-takes start `open` so demos aren't smothered.
 - Stock movements (intra-site + inter-site) are in v1. Capacity + client–area segregation
-  enforcement are in v1 (`settings.clientAreaSegregation`, default OFF). Client portal & billing
-  are OUT of v1.
+  enforcement are in v1. **Client–area segregation is a CONFIRMED requirement for this client (no mixing
+  different clients in one location): the seed ships it ON (`settings.clientAreaSegregation:true`) with a
+  dedicated Storage Area per client (D/E/F = Technip/Schlumberger/Yinson, B = Globex; A + Soyo-C shared).
+  The product/greenfield default stays OFF — per-deployment config, not a code default.** Client portal &
+  billing are OUT of v1.
 - **Outbound: two fulfilment paths, offered per action** — the Orders list shows **both** `Allocate ›`
   (classic: separate Allocate/Pick/Dispatch screens) and `Express fulfil ›` (one-pass `erp-so-fulfil.html`)
   on every open/`partial` order. **Express Fulfil is to be role-gated in the coding phase** (separate-team

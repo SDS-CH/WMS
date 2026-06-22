@@ -48,6 +48,7 @@
 ### CC-02 Capacity + segregation — `ICapacityService`
 - `CapacityResult CheckForAdd(binId, qty, productId)` → `{ ok, fails[], after }` · `bool SegregationOk(binId, clientId)`.
 - Capacity = weight/units/LPN-slots vs the bin max (unset = ∞). Segregation honours `settings.clientAreaSegregation`.
+- 📌 **DECISION (client-confirmed): client–area segregation is REQUIRED for this client** — different clients' stock must **not** share a location. This deployment runs `clientAreaSegregation = ON` with a **dedicated Storage Area per client** (`Area.owningClient`); the greenfield default stays OFF. The build MUST deliver **(a)** the system toggle + per-area `owningClient` config UI (Phase 1 · P01-S02) and **(b)** server-side `SegregationOk` enforcement on every bin-write. Mock seed: Areas D/E/F = Technip/Schlumberger/Yinson, B = Globex; Area A + Soyo Area C shared.
 - **Consumers:** Putaway directed-slotting, Returns direct-restock, Move destination, Transfer-receive destination. **Single source of truth — no per-screen reimplementation** (the mock flagged `erp-pa-tasks` for using a local impl; the build must not).
 
 ### CC-03 Audit ledger — `IStockLedgerService`

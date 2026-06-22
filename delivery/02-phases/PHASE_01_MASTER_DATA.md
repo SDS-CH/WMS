@@ -14,13 +14,15 @@ CC-05 (tracking flags on Product), CC-07 (reason domains), CC-08 (scoping), CC-0
 | Card | Scope | Notes | Tier |
 |---|---|---|---|
 | P01-S01 | Clients (+ `allowBackorder`), Suppliers, Carriers, Consignees | CRUD recipe | S–M |
-| P01-S02 | Sites (+ `levels[]` addressing, `areas[]` storage areas), Locations (+ capacity, area) | areas/levels are child tables; feeds CC-02 | M |
+| P01-S02 | Sites (+ `levels[]` addressing, `areas[]` storage areas), Locations (+ capacity, area) | areas/levels are child tables; feeds CC-02; **incl. the `clientAreaSegregation` toggle + per-area `owningClient` — client-confirmed ON** | M |
 | P01-S03 | Products (+ `track` flags, category/subcat, weight, **preferred storage** per site), Categories, UoM | tracking flags drive CC-05 everywhere | M |
 | P01-S04 | Packaging (shared templates + product packaging w/ per-level barcodes) | nested levels → child table; clone provenance (DATA_MODEL gap #5) | M |
 | P01-S05 | Reason codes (`DB.reasonDomains` — status/adjust/correct/return/dispose/refuse/rtv/receipt/dispatch) | drives CC-07; generic editor | S |
 | P01-S06 | Users + WMS role/right assignment + **client/site scope** mapping; client–user map | ties to CC-08/CC-10 (Phase 0) | M |
 | P01-S07 | PWA lookups (location, product) — read-only | reuse generated client | S |
 | P01-S08 | Bulk **import** (master data) | mock `erp-md-import` is stubbed; scope CSV import | M |
+
+> **📌 Client-confirmed (CC-02):** client–area segregation runs **ON** for this client — different clients' stock must not share a location. **P01-S02 must deliver the `clientAreaSegregation` system toggle + the per-Area `owningClient` editor (Sites screen)**, and each client gets a dedicated Area (mock seed: Areas D/E/F = Technip/Schlumberger/Yinson, B = Globex; A + Soyo-C shared). The enforcement itself is CC-02 (Phase 0 `ICapacityService.SegregationOk`), consumed by Putaway/Move/Transfer-receive/Returns-restock.
 
 ## Depends on
 Phase 0 (skeleton, scoping, CRUD base, reason framework).

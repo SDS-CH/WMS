@@ -41,6 +41,12 @@ A **Man/Days estimation** as a **simple doc, by page name and functionality** (o
 
 ---
 
+## ▶ Confirmed client requirements (locked — must be built)
+
+1. **Client–area segregation = ON.** Different clients' stock must **not** share a warehouse location. The build delivers the `clientAreaSegregation` system toggle + a per-Area `owningClient` (configured on the Sites screen) and **server-side enforcement on every bin-write** (putaway · move · transfer-receive · returns-restock) via `ICapacityService.SegregationOk` (CC-02). Each client gets a **dedicated Storage Area** (mock seed: Areas D/E/F = Technip/Schlumberger/Yinson, B = Globex; Area A + Soyo Area C deliberately shared). The product/greenfield default stays OFF — this is a per-deployment config, **confirmed ON for this client**. *(Recorded across: `01-orchestrator/CROSS_CUTTING_CONCERNS.md` CC-02 · `02-phases/PHASE_01_MASTER_DATA.md` P01-S02 · `02-phases/PHASE_00_FOUNDATION.md` P00-S06 · `../docs/01_Master_Data.md` · `../docs/GLOSSARY.md` · `../docs/DATA_MODEL.md` · `../CLAUDE.md`.)*
+
+---
+
 ## ▶ Open decisions (don't lose — flagged across the framework)
 
 Recorded with recommendations in `01-orchestrator/HOST_INTEGRATION_MAP.md` §E. #1–#3 shape every Phase-0 card; #4–#5 affect the PWA cards.

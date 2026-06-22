@@ -21,7 +21,7 @@ Any process feature (those are Phases 2–6). Master-data CRUD (Phase 1).
 | P00-S03 | **`ITenantScopeService`** (client+site filter+assert) + WMS role/claim integration (decision #2) | CC-08, CC-10 | L |
 | P00-S04 | **`IStockLedgerService.LogTxn`** (append-only, in-transaction) | CC-03 | M |
 | P00-S05 | **`IFreezeService`** (`IsLocationFrozen`/`FrozenTakeFor`) | CC-01 | M |
-| P00-S06 | **`ICapacityService`** (capacity + segregation, single source of truth) | CC-02 | M |
+| P00-S06 | **`ICapacityService`** (capacity + segregation, single source of truth — **segregation is client-confirmed ON; enforce `SegregationOk` server-side on every bin-write**) | CC-02 | M |
 | P00-S07 | **`IAllocationService`** interface + FEFO/FIFO + reservation-aware availability core | CC-06 | L |
 | P00-S08 | **`IReasonService`** + approval / maker-checker framework (`sameActor`) | CC-07 | M |
 | P00-S09 | **Assignment facet** (`assignee` + My-tasks/claim) + **tracking-flag** DTO plumbing | CC-09, CC-05 | M |

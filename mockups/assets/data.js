@@ -75,7 +75,11 @@ const DB = {
   ],
 
   // System-level policy (normally edited in Master Data settings).
-  settings: { clientAreaSegregation: false },
+  // clientAreaSegregation ON: this client requires that different clients' stock is NOT mixed in the same
+  // location. With it ON, a client may only be put away into bins whose Area it owns (or an unowned/shared
+  // Area); other clients' Areas are refused (binSegregationOk). PRODUCT DEFAULT is OFF (opt-in) — this is a
+  // per-deployment config choice, confirmed for this client. See docs/01_Master_Data.md + GLOSSARY.md.
+  settings: { clientAreaSegregation: true },
 
   // ---- Reason codes (MASTER DATA — configurable in erp-md-reasons.html) ----
   // Operational screens never hardcode reasons; they read this via reasonsFor(domain, group).
@@ -1451,15 +1455,16 @@ if (!DB.rtvs.length) DB.rtvs.push(
    OIL & GAS CLIENTS (3PL) — added seed block.
    Three industrial clients (Technip Energies, Schlumberger, Yinson) operating out of the
    EXISTING Luanda DC (S-LYON) — NO new site (per the build decision: reuse Luanda). Adds: a global
-   Oil & Gas product category; a dedicated heavy-duty storage Area D + its bins at Luanda (rig
-   equipment is far heavier than the FMCG that Areas A/B are weight-capped for — a gate valve is
-   85 kg, a barite pallet ~5 t — so O&G stock homes to Area D, leaving the food/cold-chain
-   capacity demos intact); suppliers/carrier/consignees; products that exercise the tracking
+   Oil & Gas product category; per-client DEDICATED heavy-duty storage areas at Luanda (D=Technip,
+   E=Schlumberger, F=Yinson) + their bins (rig equipment is far heavier than the FMCG that Areas
+   A/B are weight-capped for — a gate valve is 85 kg, a barite pallet ~5 t — and segregation keeps
+   each client's stock in its own zone); suppliers/carrier/consignees; products that exercise the tracking
    flags realistically (bulk fasteners/gaskets = none; pipe/flange = lot/heat-number;
    equipment = serial; drilling/cementing chemicals = lot+expiry); and a full
    receive -> putaway -> stock-out chain (ASNs incl. a partial, to-putaway + available LPNs incl.
    an expired chemical + a to-inspect + a damaged plate, and outbound orders incl. a SHORT-CLOSE
-   and a BACK-ORDER). Segregation stays OFF globally; Area D.owningClient is '' (shared while OFF).
+   and a BACK-ORDER). Client–area segregation is ON (DB.settings.clientAreaSegregation=true): each O&G
+   client's Area is owned, so cross-client putaway/move/transfer/restock is blocked (binSegregationOk).
    Idempotent: guarded on C-TCHP so a re-eval / hydrated PWA snapshot won't duplicate.
    ============================================================ */
 (function seedOilAndGas(){
@@ -1476,19 +1481,24 @@ if (!DB.rtvs.length) DB.rtvs.push(
     ]}
   );
 
-  // --- New heavy-duty storage AREA at the existing Luanda DC (decoupled from the addressing path). ---
+  // --- Per-client DEDICATED storage areas at Luanda (segregation is ON). Each O&G client gets its OWN Area +
+  //     heavy bins, so binSegregationOk() refuses cross-client putaway / move / transfer-receive / returns-restock.
+  //     (Existing Areas: A = shared, B = Globex-owned. Soyo Area C stays shared — a deliberate shared example.) ---
   const lyon = DB.sites.find(s=>s.id==='S-LYON');
   if (lyon && !lyon.areas.some(a=>a.code==='D')) lyon.areas.push(
-    { code:'D', name:'Area D — Industrial / Oil & Gas', preferredCategories:['CAT-OG'],
-      preferredSubCategories:['SUB-RIG','SUB-VALVE','SUB-DRILL','SUB-CHEM','SUB-ROT'], owningClient:'' }
+    { code:'D', name:'Area D — Technip (Oil & Gas)',      preferredCategories:['CAT-OG'], preferredSubCategories:['SUB-RIG','SUB-VALVE'],  owningClient:'C-TCHP' },
+    { code:'E', name:'Area E — Schlumberger (Oil & Gas)', preferredCategories:['CAT-OG'], preferredSubCategories:['SUB-DRILL','SUB-CHEM'], owningClient:'C-SLB' },
+    { code:'F', name:'Area F — Yinson (Oil & Gas)',       preferredCategories:['CAT-OG'], preferredSubCategories:['SUB-ROT','SUB-VALVE'],  owningClient:'C-YIN' }
   );
 
-  // --- Heavy-capacity storage bins in Area D (high maxWeightKg for rig equipment / chemical pallets). ---
+  // --- Heavy-capacity storage bins, each assigned to its client's dedicated Area (D=Technip, E=SLB, F=Yinson). ---
   DB.locations.push(
-    { id:'LOC-D01', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B01'}, structured:'1-D-01-R1-B01', userRef:'Heavy rack — valves',    status:'active', maxWeightKg:15000, maxUnits:3000, maxLpns:15 },
-    { id:'LOC-D02', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B02'}, structured:'1-D-01-R1-B02', userRef:'Bulk fasteners',         status:'active', maxWeightKg:10000, maxUnits:4000, maxLpns:12 },
-    { id:'LOC-D03', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'02',Rack:'R1',Bin:'B01'}, structured:'1-D-02-R1-B01', userRef:'Drilling tools',         status:'active', maxWeightKg:8000,  maxUnits:2000, maxLpns:10 },
-    { id:'LOC-D04', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'02',Rack:'R1',Bin:'B02'}, structured:'1-D-02-R1-B02', userRef:'Chemicals & consumables', status:'active', maxWeightKg:12000, maxUnits:5000, maxLpns:12 }
+    { id:'LOC-D01', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B01'}, structured:'1-D-01-R1-B01', userRef:'Technip — valves / heavy',   status:'active', maxWeightKg:15000, maxUnits:3000, maxLpns:15 },
+    { id:'LOC-D02', site:'S-LYON', type:'storage', area:'D', path:{Floor:'1',Zone:'D',Aisle:'01',Rack:'R1',Bin:'B02'}, structured:'1-D-01-R1-B02', userRef:'Technip — fasteners',        status:'active', maxWeightKg:10000, maxUnits:4000, maxLpns:12 },
+    { id:'LOC-E01', site:'S-LYON', type:'storage', area:'E', path:{Floor:'1',Zone:'E',Aisle:'01',Rack:'R1',Bin:'B01'}, structured:'1-E-01-R1-B01', userRef:'SLB — drilling tools',       status:'active', maxWeightKg:8000,  maxUnits:2000, maxLpns:10 },
+    { id:'LOC-E02', site:'S-LYON', type:'storage', area:'E', path:{Floor:'1',Zone:'E',Aisle:'01',Rack:'R1',Bin:'B02'}, structured:'1-E-01-R1-B02', userRef:'SLB — chemicals',           status:'active', maxWeightKg:12000, maxUnits:5000, maxLpns:12 },
+    { id:'LOC-F01', site:'S-LYON', type:'storage', area:'F', path:{Floor:'1',Zone:'F',Aisle:'01',Rack:'R1',Bin:'B01'}, structured:'1-F-01-R1-B01', userRef:'Yinson — rotating / marine', status:'active', maxWeightKg:8000,  maxUnits:2000, maxLpns:10 },
+    { id:'LOC-F02', site:'S-LYON', type:'storage', area:'F', path:{Floor:'1',Zone:'F',Aisle:'01',Rack:'R1',Bin:'B02'}, structured:'1-F-01-R1-B02', userRef:'Yinson — general',          status:'active', maxWeightKg:10000, maxUnits:4000, maxLpns:12 }
   );
 
   // --- Clients (owners of the stock; 3PL — operator never owns it). Mix of remainder policy. ---
@@ -1535,15 +1545,15 @@ if (!DB.rtvs.length) DB.rtvs.push(
     { id:'P-TQ03', client:'C-TCHP', sku:'GV-6-900',     name:'Gate Valve 6" 900# (trunnion)',     uom:'each', barcode:'6021000000035', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-VALVE', weightKg:85,   preferred:[{site:'S-LYON',mode:'location',ref:'LOC-D01'}] },
     { id:'P-TQ04', client:'C-TCHP', sku:'RJG-R46',      name:'Ring-Joint Gasket R-46 (Inconel)',  uom:'each', barcode:'6021000000042', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:0.4,  preferred:[] },
     // Schlumberger — oilfield services
-    { id:'P-SB01', client:'C-SLB',  sku:'BIT-PDC-8.5',  name:'PDC Drill Bit 8½"',                 uom:'each', barcode:'6022000000010', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-DRILL', weightKg:45,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
-    { id:'P-SB02', client:'C-SLB',  sku:'BARITE-25',    name:'Drilling Mud Barite (25 kg bag)',   uom:'bag',  barcode:'6022000000027', track:{lot:true,expiry:false,serial:false},  category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:25,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-SB01', client:'C-SLB',  sku:'BIT-PDC-8.5',  name:'PDC Drill Bit 8½"',                 uom:'each', barcode:'6022000000010', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-DRILL', weightKg:45,   preferred:[{site:'S-LYON',mode:'area',ref:'E'}] },
+    { id:'P-SB02', client:'C-SLB',  sku:'BARITE-25',    name:'Drilling Mud Barite (25 kg bag)',   uom:'bag',  barcode:'6022000000027', track:{lot:true,expiry:false,serial:false},  category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:25,   preferred:[{site:'S-LYON',mode:'area',ref:'E'}] },
     { id:'P-SB03', client:'C-SLB',  sku:'MWD-SUB',      name:'MWD Sensor Sub',                    uom:'each', barcode:'6022000000034', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-DRILL', weightKg:60,   preferred:[] },
-    { id:'P-SB04', client:'C-SLB',  sku:'CEM-RET-20',   name:'Cement Retarder Additive (20 kg)',  uom:'bag',  barcode:'6022000000041', track:{lot:true,expiry:true,serial:false},   category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:20,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-SB04', client:'C-SLB',  sku:'CEM-RET-20',   name:'Cement Retarder Additive (20 kg)',  uom:'bag',  barcode:'6022000000041', track:{lot:true,expiry:true,serial:false},   category:'CAT-OG', subCategory:'SUB-CHEM',  weightKg:20,   preferred:[{site:'S-LYON',mode:'area',ref:'E'}] },
     // Yinson — FPSO / marine
-    { id:'P-YN01', client:'C-YIN',  sku:'IMP-CRNI',     name:'Centrifugal Pump Impeller (CrNi)',  uom:'each', barcode:'6023000000019', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-ROT',   weightKg:28,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] },
+    { id:'P-YN01', client:'C-YIN',  sku:'IMP-CRNI',     name:'Centrifugal Pump Impeller (CrNi)',  uom:'each', barcode:'6023000000019', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-ROT',   weightKg:28,   preferred:[{site:'S-LYON',mode:'area',ref:'F'}] },
     { id:'P-YN02', client:'C-YIN',  sku:'HOSE-1-10M',   name:'Hydraulic Hose Assembly 1" (10 m)', uom:'each', barcode:'6023000000026', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-ROT',   weightKg:6,    preferred:[] },
     { id:'P-YN03', client:'C-YIN',  sku:'GKT-MAR-SET',  name:'Marine Gasket Set (topside)',       uom:'each', barcode:'6023000000033', track:{lot:false,expiry:false,serial:false}, category:'CAT-OG', subCategory:'SUB-RIG',   weightKg:1.2,  preferred:[] },
-    { id:'P-YN04', client:'C-YIN',  sku:'CV-2',         name:'Topside Control Valve 2"',          uom:'each', barcode:'6023000000040', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-VALVE', weightKg:22,   preferred:[{site:'S-LYON',mode:'area',ref:'D'}] }
+    { id:'P-YN04', client:'C-YIN',  sku:'CV-2',         name:'Topside Control Valve 2"',          uom:'each', barcode:'6023000000040', track:{lot:false,expiry:false,serial:true},  category:'CAT-OG', subCategory:'SUB-VALVE', weightKg:22,   preferred:[{site:'S-LYON',mode:'area',ref:'F'}] }
   );
 
   // --- LPNs: available stock (Area D) + to-putaway (inbound staging) + an expired chemical + a to-inspect + a damaged.
@@ -1556,17 +1566,17 @@ if (!DB.rtvs.length) DB.rtvs.push(
     { id:'LPN-00203', client:'C-TCHP', site:'S-LYON', product:'P-TQ01', qty:500,  lot:'',        expiry:'', serials:[],                 status:'to-putaway', loc:'LOC-WAIT-01' },
     { id:'LPN-00204', client:'C-TCHP', site:'S-LYON', product:'P-TQ04', qty:200,  lot:'',        expiry:'', serials:[],                 status:'to-putaway', loc:'LOC-WAIT-01' },
     // Schlumberger
-    { id:'LPN-00210', client:'C-SLB',  site:'S-LYON', product:'P-SB01', qty:8,    lot:'',        expiry:'',           serials:['BIT-0001…0008'], status:'available',  loc:'LOC-D03' },
-    { id:'LPN-00211', client:'C-SLB',  site:'S-LYON', product:'P-SB02', qty:200,  lot:'BAR-2405', expiry:'',          serials:[],                status:'available',  loc:'LOC-D04' },
-    { id:'LPN-00212', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:100,  lot:'CEM-2403', expiry:'2027-02-28', serials:[],                status:'available',  loc:'LOC-D04' },
+    { id:'LPN-00210', client:'C-SLB',  site:'S-LYON', product:'P-SB01', qty:8,    lot:'',        expiry:'',           serials:['BIT-0001…0008'], status:'available',  loc:'LOC-E01' },
+    { id:'LPN-00211', client:'C-SLB',  site:'S-LYON', product:'P-SB02', qty:200,  lot:'BAR-2405', expiry:'',          serials:[],                status:'available',  loc:'LOC-E02' },
+    { id:'LPN-00212', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:100,  lot:'CEM-2403', expiry:'2027-02-28', serials:[],                status:'available',  loc:'LOC-E02' },
     // expired chemical demo (expiry < WMS_TODAY 2026-06-15): physically present + 'available' but excluded from FEFO/issue.
-    { id:'LPN-00215', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:20,   lot:'CEM-2208', expiry:'2026-05-31', serials:[],                status:'available',  loc:'LOC-D04' },
+    { id:'LPN-00215', client:'C-SLB',  site:'S-LYON', product:'P-SB04', qty:20,   lot:'CEM-2208', expiry:'2026-05-31', serials:[],                status:'available',  loc:'LOC-E02' },
     { id:'LPN-00213', client:'C-SLB',  site:'S-LYON', product:'P-SB03', qty:4,    lot:'',        expiry:'',           serials:['MWD-0001…0004'], status:'to-putaway', loc:'LOC-WAIT-01' },
     { id:'LPN-00214', client:'C-SLB',  site:'S-LYON', product:'P-SB02', qty:120,  lot:'BAR-2406', expiry:'',          serials:[],                status:'to-putaway', loc:'LOC-WAIT-01' },
     // Yinson
-    { id:'LPN-00220', client:'C-YIN',  site:'S-LYON', product:'P-YN01', qty:10,   lot:'', expiry:'', serials:['IMP-0001…0010'], status:'available',  loc:'LOC-D03' },
-    { id:'LPN-00221', client:'C-YIN',  site:'S-LYON', product:'P-YN02', qty:50,   lot:'', expiry:'', serials:[],                status:'available',  loc:'LOC-D02' },
-    { id:'LPN-00222', client:'C-YIN',  site:'S-LYON', product:'P-YN04', qty:12,   lot:'', expiry:'', serials:['CV2-0001…0012'], status:'available',  loc:'LOC-D01' },
+    { id:'LPN-00220', client:'C-YIN',  site:'S-LYON', product:'P-YN01', qty:10,   lot:'', expiry:'', serials:['IMP-0001…0010'], status:'available',  loc:'LOC-F01' },
+    { id:'LPN-00221', client:'C-YIN',  site:'S-LYON', product:'P-YN02', qty:50,   lot:'', expiry:'', serials:[],                status:'available',  loc:'LOC-F01' },
+    { id:'LPN-00222', client:'C-YIN',  site:'S-LYON', product:'P-YN04', qty:12,   lot:'', expiry:'', serials:['CV2-0001…0012'], status:'available',  loc:'LOC-F01' },
     { id:'LPN-00223', client:'C-YIN',  site:'S-LYON', product:'P-YN03', qty:80,   lot:'', expiry:'', serials:[],                status:'to-putaway', loc:'LOC-WAIT-01' },
     { id:'LPN-00224', client:'C-YIN',  site:'S-LYON', product:'P-YN01', qty:6,    lot:'', expiry:'', serials:['IMP-0101…0106'], status:'to-inspect', loc:'LOC-WAIT-01' },
     { id:'LPN-00225', client:'C-YIN',  site:'S-LYON', product:'P-YN02', qty:5,    lot:'', expiry:'', serials:[],                status:'damaged',    loc:'LOC-QUAR-01' }
@@ -1592,7 +1602,7 @@ if (!DB.rtvs.length) DB.rtvs.push(
       status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-SB01', qty:3, shipped:0, alloc:[] } ] },
     { id:'OUT-7203', client:'C-YIN',  site:'S-LYON', shipTo:'CNE-YN01', ref:'PO-YIN-204', created:'2026-06-17',
       status:'allocated', fullStockOut:false, shipments:[], lines:[
-        { product:'P-YN01', qty:4, shipped:0, alloc:[ { lpn:'LPN-00220', lot:'', expiry:'', from:'LOC-D03', qty:4, picked:0, serials:'IMP-0001…0004' } ] } ] },
+        { product:'P-YN01', qty:4, shipped:0, alloc:[ { lpn:'LPN-00220', lot:'', expiry:'', from:'LOC-F01', qty:4, picked:0, serials:'IMP-0001…0004' } ] } ] },
     // SLB allowBackorder=false: orders 500 barite, only 200 available (LPN-00214's 120 is still to-putaway) -> SHORT-CLOSE demo.
     { id:'OUT-7204', client:'C-SLB',  site:'S-LYON', shipTo:'CNE-SB01', ref:'PO-SLB-120', created:'2026-06-18',
       status:'open', fullStockOut:false, shipments:[], lines:[ { product:'P-SB02', qty:500, shipped:0, alloc:[] } ] },
@@ -1604,7 +1614,7 @@ if (!DB.rtvs.length) DB.rtvs.push(
   // --- A few audit txns so Reports show O&G history (a receive + putaway pair, and the SLB partial receive). ---
   DB.txns.push(
     { id:'TXN-1101', ts:'2026-06-17 08:30', type:'receive', lpn:'LPN-00210', product:'P-SB01', qty:8,   from:'',            to:'LOC-WAIT-01', site:'S-LYON', user:'Benjamin Felix', ref:'GRN-4201', note:'Drill bits received (SLB)' },
-    { id:'TXN-1102', ts:'2026-06-17 10:15', type:'putaway', lpn:'LPN-00210', product:'P-SB01', qty:8,   from:'LOC-WAIT-01', to:'LOC-D03',     site:'S-LYON', user:'Samer Merhi',    ref:'',         note:'Directed putaway (Area D)' },
-    { id:'TXN-1103', ts:'2026-06-17 11:40', type:'receive', lpn:'LPN-00211', product:'P-SB02', qty:200, from:'',            to:'LOC-D04',     site:'S-LYON', user:'Samer Merhi',    ref:'GRN-4202', note:'Barite partial receipt (200/400)' }
+    { id:'TXN-1102', ts:'2026-06-17 10:15', type:'putaway', lpn:'LPN-00210', product:'P-SB01', qty:8,   from:'LOC-WAIT-01', to:'LOC-E01',     site:'S-LYON', user:'Samer Merhi',    ref:'',         note:'Directed putaway (Area E)' },
+    { id:'TXN-1103', ts:'2026-06-17 11:40', type:'receive', lpn:'LPN-00211', product:'P-SB02', qty:200, from:'',            to:'LOC-E02',     site:'S-LYON', user:'Samer Merhi',    ref:'GRN-4202', note:'Barite partial receipt (200/400)' }
   );
 }());

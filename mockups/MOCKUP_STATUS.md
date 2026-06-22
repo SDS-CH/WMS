@@ -43,6 +43,18 @@
   implementation, `docs/00_Project_Overview.md`); the closed edge-cases are scoped, demonstrated units of work that feed that estimate.
   Remaining: the **known limitations carried into the coding phase** (below) + optional theme polish.
 
+## ✅ DONE (2026-06-22) — Oil & gas clients + client–area segregation ON (data.js)
+
+> Post-mockup data extension for the real client. **3 oil & gas clients** on the (renamed) Luanda site — Technip
+> Energies · Schlumberger · Yinson — each with a global `CAT-OG` category, 12 products across all tracking profiles,
+> suppliers/carrier/consignees, and full receive → putaway → stock-out chains (ASNs incl. a partial; available +
+> to-putaway LPNs; outbound incl. a short-close + a back-order). Sites **Lyon DC / Paris Hub → Luanda / Soyo (Angola)**.
+> **Client–area segregation turned ON** (`settings.clientAreaSegregation:true`, a **confirmed client requirement**):
+> each O&G client has a **dedicated Storage Area** (D=Technip, E=Schlumberger, F=Yinson) with heavy bins; B=Globex,
+> A + Soyo-C shared. `binSegregationOk` now blocks cross-client putaway/move/transfer/restock. Decision recorded
+> forward in `docs/` + `delivery/` + `CLAUDE.md`. **Verified:** node data-layer suite — **167 assertions, 0 fail**.
+> *(`data.js` is a shared anchor — see `docs/BUILD_LOG.md` for the full entry.)*
+
 ## ✅ DONE (2026-06-19) — Work-item assignment ("dispatch to a person") + My-requests filter (ERP + PWA)
 
 > A lightweight cross-cutting facet — **one optional `assignee` (→ User.id) on work items + a "My requests / My tasks" filter** at the top of every main list. **No new screens, no new entity.** A supervisor *dispatches* a request to a person in the ERP; both channels can **filter to "mine"**; the PWA also offers per-task **self-claim**. Unassigned = **"Any"** (the default). Full detail in `docs/DATA_MODEL.md` → *Work-item assignment*.

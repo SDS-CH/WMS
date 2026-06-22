@@ -8,6 +8,23 @@
 > is the source of truth, so the old per-pass "⚠ re-upload" reminders are dropped here. All inventory mutations in
 > the mocks are session-only and reset on reload — except PWA flows, which persist to `sessionStorage` within a tab.)*
 
+## 2026-06-22 — Oil & gas clients + client–area segregation turned ON (data.js)
+
+- **3 oil & gas clients** added on the Luanda site — **Technip Energies** (`C-TCHP`), **Schlumberger** (`C-SLB`),
+  **Yinson** (`C-YIN`) — with a global `CAT-OG` category, 12 products spanning the tracking profiles (fasteners = none,
+  flange = lot/heat-number, equipment = serial, chemicals = lot+expiry), suppliers/carrier/consignees, and full
+  receive → putaway → stock-out chains (ASNs incl. a partial; available + to-putaway LPNs incl. expired/to-inspect/
+  damaged; outbound incl. a short-close + a back-order). Sites **Lyon DC / Paris Hub renamed → Luanda / Soyo (Angola)**.
+- **Client–area segregation turned ON** (`settings.clientAreaSegregation:true`) — **confirmed client requirement**
+  (different clients' stock must not share a location). Each O&G client given a **dedicated Storage Area** (D=Technip,
+  E=Schlumberger, F=Yinson) with its own heavy bins; existing Areas B=Globex, A + Soyo-C left shared. All available
+  O&G stock homed into its owner's Area; `binSegregationOk` now blocks cross-client putaway / move / transfer-receive /
+  returns-restock. Decision recorded forward across `docs/` + `delivery/` + `CLAUDE.md` (see `delivery/DELIVERY_STATUS.md`
+  → "Confirmed client requirements").
+- **Verified:** node data-layer suite — **167 assertions, 0 fail** (segregation ownership · no plate stranded under
+  segregation · re-home integrity · capacity within Area-D/E/F caps · FEFO short-close/back-order · serial counts ·
+  referential integrity · no duplicate ids). The clients + site-rename were committed (`36d6719`); the segregation pass follows.
+
 ## ERP build — all 6 sections COMPLETE
 
 - **Phase 0 — Foundation:** `index.html` (sitemap), `erp-dashboard.html`, the shells, the shared `data.js` dataset.

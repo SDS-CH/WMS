@@ -441,7 +441,7 @@ Optional photo evidence attached to a document (header) or a line. One flat coll
 Every add/remove also writes a `logTxn()` row (`attach` / `attach-remove`). **[mock]** data-URL placeholders; production stores real uploads.
 
 ## Settings (system)
-`DB.settings` — `{ clientAreaSegregation: bool }` (default **false**). ON = a client is offered only its own + unowned Areas at putaway; OFF = Areas shared, `owningClient` informational. Client→site scoping is always on regardless.
+`DB.settings` — `{ clientAreaSegregation: bool }` (greenfield default **false**). ON = a client is offered only its own + unowned Areas at putaway; OFF = Areas shared, `owningClient` informational. Client→site scoping is always on regardless. **⚠ This client REQUIRES segregation → the seed ships it `true`, with a dedicated Area per client (Areas D/E/F = Technip/SLB/Yinson, B = Globex; Area A + Soyo Area C shared). The build MUST deliver the toggle + per-area `owningClient` config and server-side enforcement (CC-02).**
 
 ---
 
