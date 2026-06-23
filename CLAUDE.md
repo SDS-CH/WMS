@@ -8,7 +8,10 @@ state and `docs/GLOSSARY.md` for locked vocabulary before starting.
 A Warehouse Management System for **client-owned stock in a 3PL warehouse** — an **ERP module**
 (back-office) plus a **PWA scanning app** (warehouse floor). Goods belong to clients, never to the
 operator's balance sheet; the system tracks traceability, location, and accountability per client.
-**Current phase: click-through HTML mockups** (Phase 2). Spec → mockups → tech implementation.
+**Phase 2 (click-through HTML mockups) is COMPLETE.** Now in **Phase 3 (delivery + technical build)** —
+see `delivery/DELIVERY_STATUS.md`. **DB schema authoring has started**: per-section SQL Server 2014 DDL
+in `scripts/` (tables only; views/procs come per-card). Master Data is done —
+`scripts/01_master_data_schema.sql` (index + plan in `scripts/README.md`). Spec → mockups → schema → tech.
 
 ## Vocabulary (locked — do not conflate)
 - **Zone** = an **addressing-path level** only (one entry in `site.levels`, e.g.

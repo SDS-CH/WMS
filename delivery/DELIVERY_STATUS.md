@@ -3,7 +3,7 @@
 > **Live status file for the post-mockup phase.** This is the successor to `../mockups/MOCKUP_STATUS.md`
 > (which covered Phase 2 — mockups, now COMPLETE). **Do not lose this context.** It holds: where we are,
 > the locked delivery sequence, the open decisions, and the **restart prompt for a new session** (bottom).
-> **Last updated: 2026-06-19.**
+> **Last updated: 2026-06-23.**
 
 ---
 
@@ -17,6 +17,14 @@
   - **PWA:** new `projects/wms-scanner` (Angular, **greenfield** — no PWA tooling in host today).
   - **DB:** **SQL Server 2014** (hard constraint — arrays → child tables, hand-rolled audit ledger).
   - Full detail: `01-orchestrator/HOST_INTEGRATION_MAP.md`.
+- **DB SCHEMA AUTHORING STARTED (2026-06-23) — section by section, ahead of the cards.** A new
+  `../scripts/` directory holds per-section SQL Server 2014 DDL (tables only; **no views/procs** — those
+  come per-screen in the dev cards). **Master Data is DONE: `../scripts/01_master_data_schema.sql`
+  (29 `wms*` tables)**, adversarially reviewed (5 lenses) + statically validated. Conventions: lower-case
+  `wms`-prefixed tables, lower-case columns, `id INT IDENTITY(1,1)` PK on every table, business ids kept
+  as a separate `code` column. **The host `[dbo].[Users]` is referenced, NOT recreated** (WMS adds
+  `wmsuserprofile` + `wmsusersite`/`wmsuserclient` for role/scope). Index + next sections:
+  `../scripts/README.md`. Next: decompose the Master Data cards (sequence step 3), then script section 02+.
 
 ---
 
@@ -51,8 +59,8 @@ A **Man/Days estimation** as a **simple doc, by page name and functionality** (o
 
 Recorded with recommendations in `01-orchestrator/HOST_INTEGRATION_MAP.md` §E. #1–#3 shape every Phase-0 card; #4–#5 affect the PWA cards.
 
-1. **Schema authoring:** EF migrations vs DBA SQL scripts → *rec: EF migrations (DDL seeded from `data.js`).*
-2. **Tenant/site scoping:** extend host `User`/`UserClaim` vs WMS-side scope table → *rec: WMS-side (don't touch shared Auth schema).*
+1. **Schema authoring:** EF migrations vs DBA SQL scripts → *rec was EF migrations.* **▶ DIRECTION TAKEN (2026-06-23): hand-authored DBA SQL scripts** in `../scripts/` (per-section DDL, tables only; views/procs per-card). If the build later prefers EF migrations, generate them from these scripts and ADR it.
+2. **Tenant/site scoping:** extend host `User`/`UserClaim` vs WMS-side scope table → *rec: WMS-side.* **▶ DIRECTION TAKEN (2026-06-23): WMS-side** — host `[dbo].[Users]` is untouched; WMS adds `wmsuserprofile` (role + all-sites/all-clients flags) + `wmsusersite`/`wmsuserclient` scope tables.
 3. **Runtime:** stay on .NET Core 3.1 vs upgrade WMS module → *rec: stay (ADR the EOL risk).*
 4. **PWA placement:** `projects/wms-scanner` in workspace vs separate repo → *rec: same workspace.*
 5. **PWA offline:** hard v1 requirement vs online-only → *biggest cost swing; confirm with client.*
@@ -72,6 +80,7 @@ Recorded with recommendations in `01-orchestrator/HOST_INTEGRATION_MAP.md` §E. 
 | Functional source of truth | `../docs/` (00–06, GLOSSARY, DATA_MODEL, BLOCKING_RULES) |
 | UX reference (the mockups) | `../mockups/` + `../mockups/MOCKUP_STATUS.md` |
 | Mock build history (estimation reference class) | `../docs/BUILD_LOG.md` |
+| **DB schema (SQL Server 2014 DDL, per section)** | `../scripts/README.md` · `../scripts/01_master_data_schema.sql` |
 
 ---
 

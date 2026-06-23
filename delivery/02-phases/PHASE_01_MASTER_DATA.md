@@ -24,6 +24,29 @@ CC-05 (tracking flags on Product), CC-07 (reason domains), CC-08 (scoping), CC-0
 
 > **📌 Client-confirmed (CC-02):** client–area segregation runs **ON** for this client — different clients' stock must not share a location. **P01-S02 must deliver the `clientAreaSegregation` system toggle + the per-Area `owningClients[]` multi-select editor (Sites screen — one OR more clients per area, empty = shared)**, and each client gets a dedicated Area (mock seed: Areas D/E/F = Technip/Schlumberger/Yinson, B = Globex; A + Soyo-C shared). The enforcement itself is CC-02 (Phase 0 `ICapacityService.SegregationOk`), consumed by Putaway/Move/Transfer-receive/Returns-restock.
 
+## Database schema (DDL) — DONE ahead of the cards (2026-06-23)
+All Master Data tables are scripted in **`../../scripts/01_master_data_schema.sql`** (SQL Server 2014,
+tables only — **no views/procs**; those are authored per-screen inside each card). 29 `wms*` tables;
+lower-case names/columns; `id INT IDENTITY(1,1)` PK on every table; business ids as a separate `code`
+column. The host **`[dbo].[Users]` is referenced, not recreated** (WMS adds `wmsuserprofile` +
+`wmsusersite`/`wmsuserclient`). See `../../scripts/README.md`. Card → tables it touches:
+
+| Card | Tables |
+|---|---|
+| P01-S01 | `wmsclient`, `wmsclientsite`, `wmssupplier`, `wmscarrier`, `wmsconsignee` |
+| P01-S02 | `wmssite`, `wmssitelevel`, `wmsstoragearea`, `wmsareacategory`, `wmsareasubcategory`, `wmsareaclient`, `wmslocation`, `wmslocationpath`, `wmssetting` (segregation toggle), `wmsdefaultsitelevel` |
+| P01-S03 | `wmsproduct`, `wmsproductpreferred`, `wmscategory`, `wmssubcategory`, `wmsuom` |
+| P01-S04 | `wmspackaging`, `wmspackaginglevel` |
+| P01-S05 | `wmsreasondomain`, `wmsreasongroup`, `wmsreason` |
+| P01-S06 | `wmsuserprofile`, `wmsusersite`, `wmsuserclient` (+ host `[dbo].[Users]`) |
+| P01-S07 | *(read-only over `wmslocation` / `wmsproduct` — no new tables)* |
+| P01-S08 | *(bulk-loads `wmsproduct` / `wmslocation` — no new tables)* |
+| *(unassigned)* | `wmslpnconfig` — LPN/SSCC numbering+label config (spec In-Scope; no mock screen yet — fold into P01-S02 settings or a dedicated settings card) |
+
+> The composite FKs on `wmslocation` (area must match site) and `wmsproductpreferred` (chosen
+> location/area must match site) back the **CC-02 client–area segregation** requirement at the schema level;
+> the cross-client/bin-write enforcement itself still lives in `ICapacityService.SegregationOk` (Phase 0).
+
 ## Depends on
 Phase 0 (skeleton, scoping, CRUD base, reason framework).
 
