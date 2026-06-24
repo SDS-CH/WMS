@@ -953,4 +953,14 @@ GO
    NOT in this file (by design): views and stored procedures — they are built
    per-screen during the Master Data development cards. Seed/reference data is
    also out of scope here (schema only).
+
+   COMPANION SEED FILE
+   -------------------
+   Reference rows that screens CONSUME (rather than author) live in the companion
+   script  01_master_data_seed.sql  (run it AFTER this schema). At present it
+   seeds the canonical Units of Measure (wmsuom: EA/KG/L/M base units + common
+   packaging units) because the erp-md-uom.html "Packaging hierarchies" editor
+   sources its base-unit + per-level UoM dropdowns from wmsuom and is unusable
+   against an empty table. User-authored masters (categories, consignees,
+   clients, sites, …) are NOT seeded — they are created on their own screens.
    ============================================================================ */
