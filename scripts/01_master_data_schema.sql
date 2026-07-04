@@ -584,9 +584,14 @@ GO
             ON, serial OFF (serials are scanned off the unit, not minted). RULE:
             expiry implies lot (ck_…_track). "weightkg" is the BASE-unit weight
             feeding putaway capacity math. "baseuom" is the base unit label (free
-            text aligning to a wmsuom.code). "testcase" is a demo-only
-            tracking-profile tag (A-D) carried from the mock dataset. Preferred home
-            storage lives in wmsproductpreferred; packaging in wmspackaging. */
+            text aligning to a wmsuom.code). "verificationstatus" backs the Receive
+            screen's role-based INLINE product creation (02_Goods_Reception):
+            privileged roles create 'verified'; other roles create 'pending' —
+            excluded from normal product pickers until a supervisor / the ERP
+            confirms it (flip to 'verified' on the Products screen). "testcase" is
+            a demo-only tracking-profile tag (A-D) carried from the mock dataset.
+            Preferred home storage lives in wmsproductpreferred; packaging in
+            wmspackaging. */
 IF OBJECT_ID(N'dbo.wmsproduct', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.wmsproduct (
@@ -609,6 +614,7 @@ BEGIN
         tracklot       BIT           NOT NULL CONSTRAINT df_wmsproduct_tracklot DEFAULT (1),
         trackexpiry    BIT           NOT NULL CONSTRAINT df_wmsproduct_trackexpiry DEFAULT (1),
         trackserial    BIT           NOT NULL CONSTRAINT df_wmsproduct_trackserial DEFAULT (0),
+        verificationstatus VARCHAR(20) NOT NULL CONSTRAINT df_wmsproduct_verif DEFAULT ('verified'),  -- 'pending' = inline-created at Receive by a non-privileged role
         testcase       VARCHAR(4)    NULL,        -- demo tracking-profile tag (A-D); NULL in production
         createdby      INT           NULL,
         createdat      DATETIME2     NULL,
@@ -618,6 +624,7 @@ BEGIN
         CONSTRAINT uq_wmsproduct_code UNIQUE (code),
         CONSTRAINT uq_wmsproduct_clientsku UNIQUE (clientid, sku),
         CONSTRAINT ck_wmsproduct_track CHECK (trackexpiry = 0 OR tracklot = 1),  -- expiry => lot
+        CONSTRAINT ck_wmsproduct_verif CHECK (verificationstatus IN ('verified','pending')),
         CONSTRAINT ck_wmsproduct_testcase CHECK (testcase IS NULL OR testcase IN ('A','B','C','D')),
         CONSTRAINT fk_wmsproduct_client      FOREIGN KEY (clientid)      REFERENCES dbo.wmsclient (id),
         CONSTRAINT fk_wmsproduct_category    FOREIGN KEY (categoryid)    REFERENCES dbo.wmscategory (id),

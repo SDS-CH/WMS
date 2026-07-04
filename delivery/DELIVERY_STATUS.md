@@ -3,12 +3,28 @@
 > **Live status file for the post-mockup phase.** This is the successor to `../mockups/MOCKUP_STATUS.md`
 > (which covered Phase 2 — mockups, now COMPLETE). **Do not lose this context.** It holds: where we are,
 > the locked delivery sequence, the open decisions, and the **restart prompt for a new session** (bottom).
-> **Last updated: 2026-06-23.**
+> **Last updated: 2026-07-03.**
 
 ---
 
 ## ▶ Where we are
 
+- **DEVELOPMENT PHASE RUNNING (since 2026-06-23) — the build track has moved to the dev tree.** Three
+  parallel teams (Master Data · Goods Reception · Reporting) build JIRA-style cards under
+  `SDS-ERP-SOLUTION/WMSProject/cards/<section>/` (per-section `_progress.md` trackers; session-start
+  briefing via the `/progress-wms <section>` skill). Locked-sequence deliverables 1–2 are produced
+  (`WMS_Functional_Specification.docx` + `WMS_Man_Days_Estimation*.docx`, this folder); step 3 (build
+  cards) is decomposing per section in the dev tree. **This file stays the SPEC-track status** (docs,
+  phases, DDL scripts); per-card build progress lives in the dev-tree trackers, NOT here.
+- **DB schema — section 02 (Goods Reception + shared operational core) DONE (2026-07-03):**
+  `../scripts/02_goods_reception_schema.sql` (16 tables — ASN, receipts + draft serials, mixed pallets,
+  inspection, GRN, refusal, plus the shared `wmslpn`/`wmstxn`/`wmsattachment` core) + companion seed
+  (receipt/refuse/discrepancy reason domains). Verified twice field-by-field against the 5 ERP mockups +
+  `data.js`; pre-execution fixes applied (incl. the `'reprint'` txn type P02-S06 requires). **Structure-
+  update policy established:** canonical numbered files are edited in place (PROD runs fresh) AND every
+  change to an already-shipped table is appended as a guarded ALTER to `../scripts/01_master_data_updates.sql`
+  (dev DBs catch up); policy documented in `../scripts/README.md`. First entry:
+  `wmsproduct.verificationstatus` ('verified'|'pending' — the Receive inline-creation policy).
 - **Mockup phase (Phase 2): COMPLETE** — both channels (ERP + PWA), edge-case hardened, on the shared `data.js`. See `../mockups/MOCKUP_STATUS.md`.
 - **Execution-layer framework: SCAFFOLDED** — `delivery/` (35 files): orchestrator, host-integration map, cross-cutting registry, 16 common-rule files, 9 phase files (each with its planned-card list), the sub-phase template + 1 fully-worked reference card (`P03-S01`).
 - **Host stack confirmed — this is a BROWNFIELD integration:**

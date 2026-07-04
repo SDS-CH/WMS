@@ -25,7 +25,8 @@
 
      GROUP B — Goods Reception
        wmsasn, wmsasnline             ← inbound order / ASN (status DERIVED)
-       wmsreceipt, wmsreceiptline     ← the physical receive event (what arrived)
+       wmsreceipt, wmsreceiptline,    ← the physical receive event (what arrived;
+         wmsreceiptlineserial            + serials captured on a draft line)
        wmspallet, wmspalletline,      ← mixed/aggregate pallet (decomposes at putaway)
          wmspalletlineserial
        wmsinspection                  ← formal QC accept/reject decision
@@ -152,14 +153,14 @@ BEGIN
     CREATE TABLE dbo.wmsasnline (
         id          INT IDENTITY(1,1) NOT NULL,
         asnid       INT           NOT NULL,
-        lineno      INT           NOT NULL,   -- 1-based position on the ASN
+        [lineno]      INT           NOT NULL,   -- 1-based position on the ASN
         productid   INT           NOT NULL,
         qty         DECIMAL(18,3) NOT NULL,   -- expected base units
         received    DECIMAL(18,3) NOT NULL CONSTRAINT df_wmsasnline_received DEFAULT (0),
         uomid       INT           NULL,        -- optional expected UoM / pack level label
         note        NVARCHAR(200) NULL,
         CONSTRAINT pk_wmsasnline PRIMARY KEY (id),
-        CONSTRAINT uq_wmsasnline_lineno UNIQUE (asnid, lineno),
+        CONSTRAINT uq_wmsasnline_lineno UNIQUE (asnid, [lineno]),
         CONSTRAINT fk_wmsasnline_asn     FOREIGN KEY (asnid)     REFERENCES dbo.wmsasn (id),
         CONSTRAINT fk_wmsasnline_product FOREIGN KEY (productid) REFERENCES dbo.wmsproduct (id),
         CONSTRAINT fk_wmsasnline_uom     FOREIGN KEY (uomid)     REFERENCES dbo.wmsuom (id)
@@ -276,7 +277,11 @@ GO
               * off-ASN extras      : "offasn" = 1 (asnlineid NULL) — an unexpected
                 item added at receive; it does not count toward ASN line completion.
               * label model         : 'single' (one LPN) | 'split' (N LPNs per-each
-                /per-pack) | 'pallet' (deferred onto a mixed pallet).
+                /per-pack — the chosen pack level persists in splitpackaginglevelid,
+                NULL = per each/base) | 'pallet' (deferred onto a mixed pallet).
+              * draft serials       : serials captured before Confirm live in
+                wmsreceiptlineserial (no plate exists yet on a status='draft'
+                receipt); Confirm slices them onto the minted plates' wmslpnserial.
             The minted plate(s) link BACK here via wmslpn.receiptlineid; a line
             deferred to a pallet has no LPN at receipt (the wmspalletline links via
             its receiptlineid). conservation: Σ(minted/pallet base) == qty. */
@@ -285,7 +290,7 @@ BEGIN
     CREATE TABLE dbo.wmsreceiptline (
         id                      INT IDENTITY(1,1) NOT NULL,
         receiptid               INT           NOT NULL,
-        lineno                  INT           NOT NULL,   -- 1-based on the receipt
+        [lineno]                  INT           NOT NULL,   -- 1-based on the receipt
         asnlineid               INT           NULL,        -- NULL when offasn=1
         productid               INT           NOT NULL,
         enteredqty              DECIMAL(18,3) NOT NULL,    -- qty in the chosen pack level
@@ -301,21 +306,43 @@ BEGIN
         overreceiptapproved     BIT           NOT NULL CONSTRAINT df_wmsreceiptline_ovr DEFAULT (0),
         offasn                  BIT           NOT NULL CONSTRAINT df_wmsreceiptline_offasn DEFAULT (0),
         labelmodel              VARCHAR(20)   NOT NULL CONSTRAINT df_wmsreceiptline_label DEFAULT ('single'),
+        splitpackaginglevelid   INT           NULL,        -- labelmodel='split': pack level split by (NULL = per each/base)
         note                    NVARCHAR(200) NULL,
         CONSTRAINT pk_wmsreceiptline PRIMARY KEY (id),
-        CONSTRAINT uq_wmsreceiptline_lineno UNIQUE (receiptid, lineno),
+        CONSTRAINT uq_wmsreceiptline_lineno UNIQUE (receiptid, [lineno]),
         CONSTRAINT ck_wmsreceiptline_condition CHECK (condition IN ('good','hold','damaged')),
         CONSTRAINT ck_wmsreceiptline_label     CHECK (labelmodel IN ('single','split','pallet')),
         CONSTRAINT fk_wmsreceiptline_receipt   FOREIGN KEY (receiptid)               REFERENCES dbo.wmsreceipt (id),
         CONSTRAINT fk_wmsreceiptline_asnline   FOREIGN KEY (asnlineid)               REFERENCES dbo.wmsasnline (id),
         CONSTRAINT fk_wmsreceiptline_product   FOREIGN KEY (productid)               REFERENCES dbo.wmsproduct (id),
         CONSTRAINT fk_wmsreceiptline_packlevel FOREIGN KEY (enteredpackaginglevelid) REFERENCES dbo.wmspackaginglevel (id),
+        CONSTRAINT fk_wmsreceiptline_splitlvl  FOREIGN KEY (splitpackaginglevelid)   REFERENCES dbo.wmspackaginglevel (id),
         CONSTRAINT fk_wmsreceiptline_condrsn   FOREIGN KEY (conditionreasonid)       REFERENCES dbo.wmsreason (id),
         CONSTRAINT fk_wmsreceiptline_discrsn   FOREIGN KEY (discrepancyreasonid)     REFERENCES dbo.wmsreason (id)
     );
     CREATE INDEX ix_wmsreceiptline_receipt ON dbo.wmsreceiptline (receiptid);
     CREATE INDEX ix_wmsreceiptline_product ON dbo.wmsreceiptline (productid);
     CREATE INDEX ix_wmsreceiptline_asnline ON dbo.wmsreceiptline (asnlineid);
+END
+GO
+
+/* wmsreceiptlineserial ---------------------------------------------------------
+   PURPOSE: Serials captured on a receipt line BEFORE Confirm mints any plate —
+            the persistence a DRAFT receipt (wmsreceipt.status='draft') needs so a
+            resumed draft still carries its captured serials. On Confirm they slice
+            onto the minted plates (wmslpnserial) exactly as entered; the rows here
+            then remain as the as-captured record of the receive event.
+            Pure child table — no audit columns. */
+IF OBJECT_ID(N'dbo.wmsreceiptlineserial', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.wmsreceiptlineserial (
+        id             INT IDENTITY(1,1) NOT NULL,
+        receiptlineid  INT          NOT NULL,
+        serial         VARCHAR(80)  NOT NULL,
+        CONSTRAINT pk_wmsreceiptlineserial PRIMARY KEY (id),
+        CONSTRAINT uq_wmsreceiptlineserial UNIQUE (receiptlineid, serial),
+        CONSTRAINT fk_wmsreceiptlineserial_line FOREIGN KEY (receiptlineid) REFERENCES dbo.wmsreceiptline (id)
+    );
 END
 GO
 
@@ -332,14 +359,14 @@ BEGIN
     CREATE TABLE dbo.wmspalletline (
         id            INT IDENTITY(1,1) NOT NULL,
         palletid      INT           NOT NULL,
-        lineno        INT           NOT NULL,
+        [lineno]        INT           NOT NULL,
         receiptlineid INT           NULL,        -- source received line (genealogy)
         productid     INT           NOT NULL,
         qty           DECIMAL(18,3) NOT NULL,     -- OPEN remainder (decremented at decomposition)
         lot           NVARCHAR(60)  NULL,
         expiry        DATETIME2     NULL,
         CONSTRAINT pk_wmspalletline PRIMARY KEY (id),
-        CONSTRAINT uq_wmspalletline_lineno UNIQUE (palletid, lineno),
+        CONSTRAINT uq_wmspalletline_lineno UNIQUE (palletid, [lineno]),
         CONSTRAINT fk_wmspalletline_pallet      FOREIGN KEY (palletid)      REFERENCES dbo.wmspallet (id),
         CONSTRAINT fk_wmspalletline_receiptline FOREIGN KEY (receiptlineid) REFERENCES dbo.wmsreceiptline (id),
         CONSTRAINT fk_wmspalletline_product     FOREIGN KEY (productid)     REFERENCES dbo.wmsproduct (id)
@@ -549,6 +576,7 @@ BEGIN
         supplierid   INT           NULL,
         deliveryref  NVARCHAR(80)  NULL,
         grndate      DATETIME2     NULL,
+        status       VARCHAR(20)   NOT NULL CONSTRAINT df_wmsgrn_status DEFAULT ('issued'),
         issuedby     INT           NULL,        -- -> [dbo].[Users].[Id] (who generated the GRN)
         receivedby   INT           NULL,        -- -> [dbo].[Users].[Id] (printed "Received by" signature line)
         inspectedby  INT           NULL,        -- -> [dbo].[Users].[Id] (printed "Inspected by" signature line)
@@ -560,6 +588,8 @@ BEGIN
         CONSTRAINT pk_wmsgrn PRIMARY KEY (id),
         CONSTRAINT uq_wmsgrn_code UNIQUE (code),
         CONSTRAINT uq_wmsgrn_receipt UNIQUE (receiptid),
+        -- lifecycle of the client document: issued (generated) -> sent (emailed to the client).
+        CONSTRAINT ck_wmsgrn_status CHECK (status IN ('issued','sent')),
         CONSTRAINT fk_wmsgrn_receipt  FOREIGN KEY (receiptid)  REFERENCES dbo.wmsreceipt (id),
         CONSTRAINT fk_wmsgrn_client   FOREIGN KEY (clientid)   REFERENCES dbo.wmsclient (id),
         CONSTRAINT fk_wmsgrn_site     FOREIGN KEY (siteid)     REFERENCES dbo.wmssite (id),
@@ -573,23 +603,26 @@ GO
 
 /* wmsgrnline -----------------------------------------------------------------
    PURPOSE: Immutable line snapshot printed on the GRN (product, qty, lot, expiry,
-            condition, and the LPN it landed on). A snapshot — deliberately stored
-            rather than re-derived from the receipt line, so a reprinted GRN always
-            reproduces exactly what was confirmed. Pure child table. */
+            condition, line remark, and the LPN it landed on). A snapshot —
+            deliberately stored rather than re-derived from the receipt line, so a
+            reprinted GRN always reproduces exactly what was confirmed ("note"
+            snapshots the receipt line's remark — the printed document renders a
+            per-line Notes column). Pure child table. */
 IF OBJECT_ID(N'dbo.wmsgrnline', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.wmsgrnline (
         id          INT IDENTITY(1,1) NOT NULL,
         grnid       INT           NOT NULL,
-        lineno      INT           NOT NULL,
+        [lineno]      INT           NOT NULL,
         productid   INT           NOT NULL,
         qty         DECIMAL(18,3) NOT NULL,
         lot         NVARCHAR(60)  NULL,
         expiry      DATETIME2     NULL,
         condition   VARCHAR(20)   NOT NULL CONSTRAINT df_wmsgrnline_condition DEFAULT ('good'),
+        note        NVARCHAR(200) NULL,         -- line remark snapshot (the printed doc's Notes column)
         lpnid       INT           NULL,         -- the plate this line landed on (NULL = deferred to pallet)
         CONSTRAINT pk_wmsgrnline PRIMARY KEY (id),
-        CONSTRAINT uq_wmsgrnline_lineno UNIQUE (grnid, lineno),
+        CONSTRAINT uq_wmsgrnline_lineno UNIQUE (grnid, [lineno]),
         CONSTRAINT ck_wmsgrnline_condition CHECK (condition IN ('good','hold','damaged')),
         CONSTRAINT fk_wmsgrnline_grn     FOREIGN KEY (grnid)     REFERENCES dbo.wmsgrn (id),
         CONSTRAINT fk_wmsgrnline_product FOREIGN KEY (productid) REFERENCES dbo.wmsproduct (id),
@@ -684,10 +717,12 @@ BEGIN
         -- spans every section's events so downstream scripts add tables, never ALTER this CHECK.
         -- transfer-loss / transfer-cancel (Section 06 transfer abandon/short) and park (Section 03
         -- putaway-to-overflow when no bin is available) are downstream events listed up-front here.
+        -- 'reprint' audits every label reprint (P02-S06 — erp-gr-labels / pwa-gr-reprint / print-again
+        -- from any screen): qty 0, lpnid or ref identifies the plate/pallet; nothing is minted.
         CONSTRAINT ck_wmstxn_type CHECK (type IN
             ('receive','putaway','park','move','transfer-ship','transfer-receive','transfer-loss',
              'transfer-cancel','adjust','correct','count','status','repack','return','dispatch',
-             'attach','attach-remove','inspect','refuse','rtv','dispose')),
+             'attach','attach-remove','inspect','refuse','rtv','dispose','reprint')),
         CONSTRAINT fk_wmstxn_lpn      FOREIGN KEY (lpnid)          REFERENCES dbo.wmslpn (id),
         CONSTRAINT fk_wmstxn_product  FOREIGN KEY (productid)      REFERENCES dbo.wmsproduct (id),
         CONSTRAINT fk_wmstxn_fromloc  FOREIGN KEY (fromlocationid) REFERENCES dbo.wmslocation (id),
@@ -759,10 +794,10 @@ GO
 /* ============================================================================
    END OF GOODS RECEPTION + SHARED OPERATIONAL CORE SCHEMA
    ----------------------------------------------------------------------------
-   WMS tables created (15):
+   WMS tables created (16):
      Shared core   : wmslpn, wmslpnserial, wmstxn, wmsattachment
      ASN           : wmsasn, wmsasnline
-     Receive       : wmsreceipt, wmsreceiptline
+     Receive       : wmsreceipt, wmsreceiptline, wmsreceiptlineserial
      Mixed pallet  : wmspallet, wmspalletline, wmspalletlineserial
      Inspection    : wmsinspection
      GRN           : wmsgrn, wmsgrnline
@@ -798,4 +833,25 @@ GO
    CROSS-SECTION GAP (Master Data, file 01): inline product creation on Receive has a
    role-based pending/unverified policy, but wmsproduct has no verification flag —
    recommend the MD team add e.g. verificationstatus VARCHAR(20) ('verified'|'pending').
+
+   SECOND VERIFICATION PASS (2026-07-03) — pre-execution audit: the 5 ERP mockups
+   (erp-gr-asn / receipt / inspect / grn / labels) + data.js re-reconciled against
+   this file before its first execution. Changes applied:
+     * wmstxn.type CHECK — added 'reprint' (P02-S06 mandates auditing EVERY label
+       reprint; this CHECK is frozen after execution by the never-ALTER convention,
+       so the type had to ship now). Now 22 types.
+     * wmsgrn — added status ('issued'|'sent'): the GRN list renders a Status badge
+       and the "Email to client" action needs a lifecycle state to move to.
+     * wmsgrnline — added note: the printed GRN renders a per-line Notes column;
+       the immutable line snapshot must reproduce it on reprint.
+     * wmsreceiptline — added splitpackaginglevelid: labelmodel='split' now records
+       WHICH pack level the split uses, so a saved DRAFT receipt resumes exactly
+       as entered.
+     * wmsreceiptlineserial — NEW pure child table: serials captured on a draft
+       line before any plate exists; Confirm slices them onto wmslpnserial.
+   Deliberately NOT added (recorded as decisions): wmstxn.palletid (pallet events
+   carry the PLT code in "ref"; revisit only if pallet stock-card queries need a
+   first-class FK) and a wmsgrnlineserial snapshot (the serial appendix reads the
+   live plate via lpnid; the as-received serials stay recoverable via the plate's
+   receiptlineid -> wmsreceiptlineserial).
    ============================================================================ */

@@ -12,15 +12,40 @@ dev phase of each Master Data / operational screen (inside the build cards).
 
 | # | File | Section | Status | Tables |
 |---|------|---------|--------|--------|
+| 00 | `00_identity_roles_seed.sql` | **WMS role families + roles** — ⚠ runs against the **HOST IDENTITY DB** (Users/Roles/RoleFamilies/ERPModules), once per environment, NOT per agency | ✅ done | — |
 | 01 | `01_master_data_schema.sql` | **Master Data** | ✅ done | 29 |
-| 02 | `02_goods_reception_schema.sql` | Goods Reception (ASN, GRN, receipts) | ⬜ planned | — |
-| 03 | `03_putaway_schema.sql` | Putaway (tasks, pallets) | ⬜ planned | — |
+| 01 | `01_master_data_seed.sql` | Master Data reference/seed rows (UoM units, base reason domains) | ✅ done | — |
+| 01 | `01_master_data_updates.sql` | **Structure updates** for already-provisioned DBs (see policy below) | ✅ done | — |
+| 02 | `02_goods_reception_schema.sql` | Goods Reception (ASN, receipts, pallets, inspection, GRN, refusal) + shared core (LPN, txn ledger, attachments) | ✅ done | 16 |
+| 02 | `02_goods_reception_seed.sql` | Goods-Reception reason domains (receipt / refuse / discrepancy) | ✅ done | — |
+| 03 | `03_putaway_schema.sql` | Putaway — **no new tables** (operates on `wmslpn`/`wmspallet`/`wmstxn` from 02) | n/a | 0 |
 | 04 | `04_stock_schema.sql` | Stock / LPN visibility | ⬜ planned | — |
 | 05 | `05_stock_out_schema.sql` | Stock-Out (orders, allocation, shipments, RTV) | ⬜ planned | — |
 | 06 | `06_inventory_ops_schema.sql` | Inventory Ops (move, transfer, count, physical, repack, returns, adjust, disposal) | ⬜ planned | — |
-| 07 | `07_audit_reports_schema.sql` | Transaction ledger / attachments (Reports read these) | ⬜ planned | — |
+| 07 | `07_audit_reports_schema.sql` | Transaction ledger / attachments — created up-front in 02 (Reports read them) | n/a | 0 |
 
-Run order is the numeric order (later sections FK back to Master Data).
+Run order is the numeric order, schema before seed (later sections FK back to Master Data).
+
+## Privileges / roles policy (00_identity_roles_seed.sql)
+
+Every WMS card with a user-facing surface declares a **"### 🔐 Privileges"** section (Role Family +
+Role Name); the backend enforces it with `[Authorize(Roles = "...")]` on **mutating** endpoints
+(reads stay `[Authorize]`), and the frontend hides menus/buttons via `data.roles` +
+`SdsAccessChecker`. **Any card that introduces a NEW role must, in the same pass, append it to
+`00_identity_roles_seed.sql`** (guarded insert; add the family too if new) — that file is the single
+seeding source and is idempotent. Role registries live in each section's
+`SDS-ERP-SOLUTION/WMSProject/cards/<section>/_progress.md` (Decisions). User↔role assignment is NOT
+seeded — host admin (Users & Roles screen / groups).
+
+## Structure-update policy (canonical files vs already-executed DBs)
+
+The numbered schema files are **canonical**: when an already-shipped table changes, its `CREATE TABLE`
+block is edited **in place**, so a fresh environment (e.g. PROD) gets the full current structure from
+the numbered files alone. Because those CREATE blocks are `IF OBJECT_ID(...) IS NULL`-guarded, an
+edited block **no-ops on a database that already executed the file** — so every such change is *also*
+appended as a dated, guarded `ALTER` block to the companion **`*_updates.sql`** file
+(`01_master_data_updates.sql` for Master Data). Run the updates file on existing dev DBs to catch up;
+it is idempotent and no-ops on a freshly-provisioned DB. Constraint names are identical in both files.
 
 ## Conventions (hard constraints, all sections)
 
