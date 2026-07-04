@@ -33,7 +33,11 @@ CC-03 audit, CC-04 conservation+genealogy, CC-05 tracking flags, CC-07 reason co
 > are folded into 09/10/14. **P02-S04 (Inspect)** → 18 GR-INSPECT-BACKEND (worklist + lookups) ·
 > 19 GR-INSPECT-DECIDE-BACKEND (the accept/reject/partial `inspectionSplit` orchestration) ·
 > 20 GR-INSPECT-LIST-SCREEN · 21 GR-INSPECT-DECIDE-SCREEN (new role: Quality Inspector).
-> Still to decompose: P02-S05 (GRN screen), S06 (Labels).
+> **P02-S06 (Labels/reprint)** → 22 GR-LABELS-BACKEND (resolve/recent/by-ASN + the audited
+> 'reprint' txn) · 23 GR-LABELS-SCREEN (⚠ gated on MD-BARCODE-FOUNDATION; print = Receiving
+> Operator). **P02-S05 (GRN)** → 24 GR-GRN-BACKEND (list + immutable document payload + mark-sent)
+> · 25 GR-GRN-SCREEN (printable document; GRN data itself is minted by card 10).
+> **Decomposition COMPLETE — all sub-phases mapped to dev cards 01–25.**
 > Progress truth = the cards' frontmatter + `cards/goods-reception/_progress.md` (`/progress-wms gr`).
 
 ## Depends on

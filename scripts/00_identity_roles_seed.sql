@@ -66,14 +66,15 @@ WHERE r.Name IN (N'Manage Sites', N'Manage Partners', N'Manage Clients',
                  N'Manage UoM & Packaging', N'Manage Categories', N'Manage Consignees',
                  N'Manage Reason Codes', N'Manage Products', N'Manage Locations',
                  N'Manage WMS Users', N'ASN Manager', N'Refuse Delivery', N'Receiving Operator',
-                 N'Quality Inspector')
-  AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception'));
+                 N'Quality Inspector', N'Putaway Operator')
+  AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception', N'WMS - Putaway'));
 
 /* ---- 2. Role Families ------------------------------------------------------- */
 DECLARE @fam TABLE (Name NVARCHAR(100), Description NVARCHAR(300));
 INSERT INTO @fam (Name, Description) VALUES
     (N'WMS - Master Data',      N'WMS warehouse master data administration (sites, partners, clients, products, locations, …)'),
-    (N'WMS - Goods Reception',  N'WMS inbound flow (ASN, receiving, inspection, GRN, refusals)');
+    (N'WMS - Goods Reception',  N'WMS inbound flow (ASN, receiving, inspection, GRN, refusals)'),
+    (N'WMS - Putaway',          N'WMS storage flow (directed slotting, placement/splits, pallet decomposition, damage rejects, overflow park)');
 
 INSERT INTO dbo.RoleFamilies (Name, Description, ModuleId)
 SELECT s.Name, s.Description, @moduleId
@@ -100,7 +101,9 @@ INSERT INTO @rol (Family, Name, Description) VALUES
     (N'WMS - Goods Reception', N'ASN Manager',        N'Create/edit/delete and VOID inbound orders / ASNs (cards GR-ASN-CRUD/VOID/EDITOR; the read-only ASN worklist needs no role).'),
     (N'WMS - Goods Reception', N'Refuse Delivery',    N'Refuse a delivery at the warehouse door — irreversible, no stock minted (cards GR-REFUSAL-*; typically door supervisors).'),
     (N'WMS - Goods Reception', N'Receiving Operator', N'Run the Receive flow — draft receipts, traceability capture, confirm (mint LPNs), mixed pallets, inline product quick-create (cards 09–17; quick-create is LIVE only when the user also holds Manage Products).'),
-    (N'WMS - Goods Reception', N'Quality Inspector',  N'Formal QC decision on to-inspect plates — accept/reject/partial split with dispositions (quarantine/hold/damaged) and mandatory reject reasons (cards 19/21). Kept distinct from Receiving Operator for segregation of duties.');
+    (N'WMS - Goods Reception', N'Quality Inspector',  N'Formal QC decision on to-inspect plates — accept/reject/partial split with dispositions (quarantine/hold/damaged) and mandatory reject reasons (cards 19/21). Kept distinct from Receiving Operator for segregation of duties.'),
+    -- WMS - Putaway (cards PUT-*)
+    (N'WMS - Putaway', N'Putaway Operator', N'Run the storage flow — place/split to-putaway plates (stock goes available), park to overflow, decompose mixed pallets, damage-found rejects (cards PUT 03/04/05 endpoints; screens 07/08/09).');
 
 INSERT INTO dbo.Roles (Name, Description, FamilyId)
 SELECT s.Name, s.Description, f.Id
@@ -117,10 +120,11 @@ ORDER BY f.Name, r.Name;
 GO
 
 /* ============================================================================
-   END — seeded (idempotent): 2 role families · 14 roles.
+   END — seeded (idempotent): 3 role families · 15 roles.
    NOT seeded: UserRoles/GroupRoles assignments (host admin) · fr-FR translators.
    Applied additions (newest last — append future cards' roles above the summary):
      2026-07-03  initial registry — 10 Master Data roles + ASN Manager + Refuse Delivery
      2026-07-03  Receiving Operator (Receive-page cards 09–17)
      2026-07-03  Quality Inspector (Inspect-page cards 18–21)
+     2026-07-04  family WMS - Putaway + Putaway Operator (Putaway cards 01–09)
    ============================================================================ */
