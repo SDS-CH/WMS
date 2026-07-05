@@ -67,7 +67,8 @@ WHERE r.Name IN (N'Manage Sites', N'Manage Partners', N'Manage Clients',
                  N'Manage Reason Codes', N'Manage Products', N'Manage Locations',
                  N'Manage WMS Users', N'ASN Manager', N'Refuse Delivery', N'Receiving Operator',
                  N'Quality Inspector', N'Putaway Operator', N'Outbound Orders Manager',
-                 N'Allocation Operator', N'Dispatch Operator')
+                 N'Allocation Operator', N'Dispatch Operator', N'Express Fulfilment',
+                 N'RTV Operator')
   AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception', N'WMS - Putaway', N'WMS - Stock Out'));
 
 /* ---- 2. Role Families ------------------------------------------------------- */
@@ -109,7 +110,9 @@ INSERT INTO @rol (Family, Name, Description) VALUES
     -- WMS - Stock Out (cards SO-*)
     (N'WMS - Stock Out', N'Outbound Orders Manager', N'Create/edit/delete outbound orders and their lines, release allocations, cancel orders (reason-coded) and cancel/restore lines (cards SO-ORDERS 01/02 endpoints; screens 04/05). The orders worklist read needs no role.'),
     (N'WMS - Stock Out', N'Allocation Operator',     N'Confirm FEFO/FIFO stock allocations — reserve plates against outbound orders, incl. manual overrides and short allocations (card SO 07 endpoint; screen 09 Confirm). Candidate reads + the allocation worklist need no role. Kept distinct from Outbound Orders Manager (classic-path sites run allocation as its own team).'),
-    (N'WMS - Stock Out', N'Dispatch Operator',       N'Run the pick & issue flow — save picks + serials, report damage-at-pick / stock-not-found, and CONFIRM DISPATCH (issue stock out, mint delivery notes; cards SO 10/11/12 endpoints, screen 14 buttons). The pick worklist + pick-detail reads need no role. The single most consequential WMS right — stock leaves the building.');
+    (N'WMS - Stock Out', N'Dispatch Operator',       N'Run the pick & issue flow — save picks + serials, report damage-at-pick / stock-not-found, and CONFIRM DISPATCH (issue stock out, mint delivery notes; cards SO 10/11/12 endpoints, screen 14 buttons). The pick worklist + pick-detail reads need no role. The single most consequential WMS right — stock leaves the building.'),
+    (N'WMS - Stock Out', N'Express Fulfilment',      N'Run the ONE-PASS outbound flow — reserve, pick and dispatch in a single Confirm fulfilment, incl. express damage/not-found (card SO 15 endpoints; screen 16 — the whole menu entry is gated). Mandated as a SEPARATE right (spec CC-10): holding Allocation Operator + Dispatch Operator does NOT include it. Grant narrowly — one unreviewed click issues stock.'),
+    (N'WMS - Stock Out', N'RTV Operator',            N'Run the Return-to-Vendor flow — raise RTVs (typed supplier/client destination, eligible available-or-blocked plates), cancel them with a reason, and SHIP & ISSUE the stock out (cards SO 17/18 endpoints; screens 20/21 buttons). The RTV register read needs no role. Distinct from Dispatch Operator — returning stock to a vendor is a different accountability than shipping a customer order.');
 
 INSERT INTO dbo.Roles (Name, Description, FamilyId)
 SELECT s.Name, s.Description, f.Id
@@ -126,7 +129,7 @@ ORDER BY f.Name, r.Name;
 GO
 
 /* ============================================================================
-   END — seeded (idempotent): 4 role families · 18 roles.
+   END — seeded (idempotent): 4 role families · 20 roles.
    NOT seeded: UserRoles/GroupRoles assignments (host admin) · fr-FR translators.
    Applied additions (newest last — append future cards' roles above the summary):
      2026-07-03  initial registry — 10 Master Data roles + ASN Manager + Refuse Delivery
@@ -136,4 +139,6 @@ GO
      2026-07-05  family WMS - Stock Out + Outbound Orders Manager (Orders cards SO 01–05)
      2026-07-05  Allocation Operator (Allocation cards SO 06–09)
      2026-07-05  Dispatch Operator (Pick/Dispatch cards SO 10–14)
+     2026-07-05  Express Fulfilment (Express Fulfil cards SO 15–16 — separate right, CC-10)
+     2026-07-05  RTV Operator (RTV cards SO 17–21)
    ============================================================================ */

@@ -28,6 +28,12 @@ dev phase of each Master Data / operational screen (inside the build cards).
 
 Run order is the numeric order, schema before seed (later sections FK back to Master Data).
 
+> **Dev execution status — 2026-07-05: ALL scripts (00–06) are EXECUTED on the dev environment**
+> (`00_identity_roles_seed.sql` on the host identity DB — 4 families · 20 roles; the section
+> schemas + seeds on the dev agency DB). Every file stays idempotent/re-run-safe — after appending
+> new roles or tables, simply re-run the touched file. A fresh environment (e.g. PROD) runs the
+> numbered files in order from scratch.
+
 ## Privileges / roles policy (00_identity_roles_seed.sql)
 
 Every WMS card with a user-facing surface declares a **"### 🔐 Privileges"** section (Role Family +
@@ -103,5 +109,5 @@ USE [WMS];   -- select your WMS database first
 `01_master_data_schema.sql` was adversarially reviewed across 5 lenses (completeness vs spec/model,
 SQL-2014 compatibility, hard-constraint compliance, relational integrity, fidelity to the mock dataset)
 plus a static structural check (29 tables · identity PK on each · no forward-reference FKs ·
-composite-FK targets present · no views/procs/2016+ features). It has **not** yet been executed against
-a live SQL Server 2014 instance — run it once on the target DB to confirm.
+composite-FK targets present · no views/procs/2016+ features). All scripts have since been executed
+on the live dev SQL Server instance (2026-07-05) — see the dev execution status above.
