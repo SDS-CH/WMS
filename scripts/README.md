@@ -19,10 +19,11 @@ dev phase of each Master Data / operational screen (inside the build cards).
 | 02 | `02_goods_reception_schema.sql` | Goods Reception (ASN, receipts, pallets, inspection, GRN, refusal) + shared core (LPN, txn ledger, attachments) | ✅ done | 16 |
 | 02 | `02_goods_reception_seed.sql` | Goods-Reception reason domains (receipt / refuse / discrepancy) | ✅ done | — |
 | 03 | `03_putaway_schema.sql` | Putaway — **no new tables** (operates on `wmslpn`/`wmspallet`/`wmstxn` from 02) | n/a | 0 |
-| 04 | `04_stock_schema.sql` | Stock / LPN visibility — expected **no new tables** (SoH derived from `wmslpn`; see 02) | ⬜ planned | — |
+| 04 | `04_stock_schema.sql` | Stock / LPN visibility — **no new tables** (SoH is derived from `wmslpn`, the locked Phase-0 decision; the visibility screens read 02's tables) | n/a | 0 |
 | 05 | `05_stock_out_schema.sql` | Stock-Out (outbound orders + lines, live allocation/reservation, shipment = delivery-note snapshot, RTV) | ✅ done | 10 |
 | 05 | `05_stock_out_seed.sql` | Stock-Out reason domain (`rtv` — the `dispatch` ad-hoc domain was seeded in 01) | ✅ done | — |
-| 06 | `06_inventory_ops_schema.sql` | Inventory Ops (move, transfer, count, physical, repack, returns, adjust, disposal) | ⬜ planned | — |
+| 06 | `06_inventory_ops_schema.sql` | Inventory Ops — **the last table set** (physical inventory = the cross-section **freeze guard's data**, cycle counts incl. the F8 `pick-not-found` sheets, move, transfer, adjust/correct, repack, returns, disposal) | ✅ done | 18 |
+| 06 | `06_inventory_ops_seed.sql` | Inventory-Ops reason domain (`dispose` — group keys = `wmsdisposal.method` values). Completes the reason-domain set. | ✅ done | — |
 | 07 | `07_audit_reports_schema.sql` | Transaction ledger / attachments — created up-front in 02 (Reports read them) | n/a | 0 |
 
 Run order is the numeric order, schema before seed (later sections FK back to Master Data).
