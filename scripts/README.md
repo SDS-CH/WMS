@@ -19,8 +19,9 @@ dev phase of each Master Data / operational screen (inside the build cards).
 | 02 | `02_goods_reception_schema.sql` | Goods Reception (ASN, receipts, pallets, inspection, GRN, refusal) + shared core (LPN, txn ledger, attachments) | ✅ done | 16 |
 | 02 | `02_goods_reception_seed.sql` | Goods-Reception reason domains (receipt / refuse / discrepancy) | ✅ done | — |
 | 03 | `03_putaway_schema.sql` | Putaway — **no new tables** (operates on `wmslpn`/`wmspallet`/`wmstxn` from 02) | n/a | 0 |
-| 04 | `04_stock_schema.sql` | Stock / LPN visibility | ⬜ planned | — |
-| 05 | `05_stock_out_schema.sql` | Stock-Out (orders, allocation, shipments, RTV) | ⬜ planned | — |
+| 04 | `04_stock_schema.sql` | Stock / LPN visibility — expected **no new tables** (SoH derived from `wmslpn`; see 02) | ⬜ planned | — |
+| 05 | `05_stock_out_schema.sql` | Stock-Out (outbound orders + lines, live allocation/reservation, shipment = delivery-note snapshot, RTV) | ✅ done | 10 |
+| 05 | `05_stock_out_seed.sql` | Stock-Out reason domain (`rtv` — the `dispatch` ad-hoc domain was seeded in 01) | ✅ done | — |
 | 06 | `06_inventory_ops_schema.sql` | Inventory Ops (move, transfer, count, physical, repack, returns, adjust, disposal) | ⬜ planned | — |
 | 07 | `07_audit_reports_schema.sql` | Transaction ledger / attachments — created up-front in 02 (Reports read them) | n/a | 0 |
 
