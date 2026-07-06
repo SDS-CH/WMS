@@ -69,7 +69,9 @@ WHERE r.Name IN (N'Manage Sites', N'Manage Partners', N'Manage Clients',
                  N'Quality Inspector', N'Putaway Operator', N'Outbound Orders Manager',
                  N'Allocation Operator', N'Dispatch Operator', N'Express Fulfilment',
                  N'RTV Operator', N'Stock Status Manager', N'Stock Adjuster', N'Adjustment Approver',
-                 N'Move Operator', N'Transfer Operator', N'Count Operator', N'Count Approver')
+                 N'Move Operator', N'Transfer Operator', N'Count Operator', N'Count Approver',
+                 N'Physical Inventory Manager', N'Repack Operator', N'Returns Operator',
+                 N'Disposal Operator', N'Disposal Approver')
   AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception', N'WMS - Putaway', N'WMS - Stock Out', N'WMS - Inventory Ops'));
 
 /* ---- 2. Role Families ------------------------------------------------------- */
@@ -122,7 +124,12 @@ INSERT INTO @rol (Family, Name, Description) VALUES
     (N'WMS - Inventory Ops', N'Move Operator',        N'Relocate stock WITHIN a site — immediate guarded moves (freeze/segregation/capacity), whole plate or partial split (card INV 06 confirm endpoint; screen 09 New-move form). Routine housekeeping right; the move register read needs no role.'),
     (N'WMS - Inventory Ops', N'Transfer Operator',    N'Run the inter-site transfer flow — create/cancel drafts, SHIP (stock leaves the origin; releases open-order reservations after confirm), conditioned RECEIVE (good/damaged→quarantine/short→loss) and reasoned in-transit WRITE-OFFS (cards INV 07/08 endpoints; screens 09/10 buttons). Heavier accountability than Move Operator — grant deliberately; the transfer register read needs no role.'),
     (N'WMS - Inventory Ops', N'Count Operator',       N'Create and submit cycle-count sheets — multi-location worksheets, blind counts, found/missing lines, landing as PENDING-APPROVAL; submitting never touches stock (card INV 11 submit endpoint; screen 13 New-count builder). The count register reads need no role. The maker half of the CC-07 pair with Count Approver.'),
-    (N'WMS - Inventory Ops', N'Count Approver',       N'Decide pending count sheets — APPROVE & CORRECT (posts counted quantities, mints found plates, zeroes missing ones — after frozen-scope + stale-sheet re-validation) or reject for recount, singly or BULK within the variance tolerance (largest plate-level Δ gate). The counter can NEVER approve their own sheet (F13, per user on top of this role). Grant to supervisors — this right corrects client inventory (cards INV 12 endpoints; screen 13 bulk bar + decide buttons).');
+    (N'WMS - Inventory Ops', N'Count Approver',       N'Decide pending count sheets — APPROVE & CORRECT (posts counted quantities, mints found plates, zeroes missing ones — after frozen-scope + stale-sheet re-validation) or reject for recount, singly or BULK within the variance tolerance (largest plate-level Δ gate). The counter can NEVER approve their own sheet (F13, per user on top of this role). Grant to supervisors — this right corrects client inventory (cards INV 12 endpoints; screen 13 bulk bar + decide buttons).'),
+    (N'WMS - Inventory Ops', N'Physical Inventory Manager', N'Run full stock-takes end to end — create scoped takes (site/Area, no-overlap), FREEZE the scope (halts putaway/moves/transfers/allocation across it — the CC-01 guard), count/recount every bin, POST corrections & unfreeze (corrects plates wholesale, mints found, zeroes missing) or abandon (cards INV 14/15 endpoints; screen 16 buttons). Grant narrowly — one click halts a warehouse. The stock-take register reads need no role.'),
+    (N'WMS - Inventory Ops', N'Repack Operator',      N'Confirm stock-conversion jobs — split / merge / repack / re-kit: consume source plates, mint genealogy-carrying outputs, incl. releasing open-order reservations on consumed sources after confirm (card INV 17 confirm endpoint; screen 18 builder). Self-balancing operation, no approval step; the job register read needs no role.'),
+    (N'WMS - Inventory Ops', N'Returns Operator',     N'Run the stock re-entry flow — register put-backs / customer returns (flag-driven lot/expiry/serial capture) and PROCESS them line-by-line with dispositions (restock-direct under the shared bin guards / via-Putaway / quarantine / damaged), minting the plates (cards INV 19/20 endpoints; screen 21 buttons). The returns register reads need no role.'),
+    (N'WMS - Inventory Ops', N'Disposal Operator',    N'Raise disposal requests — scrap / destroy / write-off of BLOCKED-or-EXPIRED plates only, method-scoped reasons, landing as PENDING; raising never touches stock (card INV 22 raise endpoint; screen 24 form + the Stock Status Dispose hand-offs). The maker half of the CC-07 pair with Disposal Approver.'),
+    (N'WMS - Inventory Ops', N'Disposal Approver',    N'Decide pending disposals — APPROVE & POST (decrements the plate after freeze/released/stale re-validation; TERMINAL ''disposed'' at zero; signed ''dispose'' ledger row) or reject. The raiser can NEVER approve their own request (F13, per user on top of this role). Grant to supervisors only — this right destroys client inventory (card INV 23 endpoints; screen 24 decide buttons).');
 
 INSERT INTO dbo.Roles (Name, Description, FamilyId)
 SELECT s.Name, s.Description, f.Id
@@ -139,7 +146,7 @@ ORDER BY f.Name, r.Name;
 GO
 
 /* ============================================================================
-   END — seeded (idempotent): 5 role families · 27 roles.
+   END — seeded (idempotent): 5 role families · 32 roles.
    NOT seeded: UserRoles/GroupRoles assignments (host admin) · fr-FR translators.
    Applied additions (newest last — append future cards' roles above the summary):
      2026-07-03  initial registry — 10 Master Data roles + ASN Manager + Refuse Delivery
@@ -155,4 +162,8 @@ GO
      2026-07-06  Stock Adjuster + Adjustment Approver (Adjustments & Corrections cards INV 03–05 — maker-checker pair, CC-07)
      2026-07-06  Move Operator + Transfer Operator (Moves & Transfers cards INV 06–10)
      2026-07-06  Count Operator + Count Approver (Cycle Count cards INV 11–13 — maker-checker pair, CC-07)
+     2026-07-06  Physical Inventory Manager (Physical Inventory cards INV 14–16 — the freeze workflow, CC-01)
+     2026-07-06  Repack Operator (Repack & Re-kit cards INV 17–18)
+     2026-07-06  Returns Operator (Returns & Put-back cards INV 19–21)
+     2026-07-06  Disposal Operator + Disposal Approver (Disposal & Scrap cards INV 22–24 — maker-checker pair, CC-07)
    ============================================================================ */
