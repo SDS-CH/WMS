@@ -24,7 +24,9 @@ dev phase of each Master Data / operational screen (inside the build cards).
 | 05 | `05_stock_out_seed.sql` | Stock-Out reason domain (`rtv` — the `dispatch` ad-hoc domain was seeded in 01) | ✅ done | — |
 | 06 | `06_inventory_ops_schema.sql` | Inventory Ops — **the last table set** (physical inventory = the cross-section **freeze guard's data**, cycle counts incl. the F8 `pick-not-found` sheets, move, transfer, adjust/correct, repack, returns, disposal) | ✅ done | 18 |
 | 06 | `06_inventory_ops_seed.sql` | Inventory-Ops reason domain (`dispose` — group keys = `wmsdisposal.method` values). Completes the reason-domain set. | ✅ done | — |
-| 07 | `07_audit_reports_schema.sql` | Transaction ledger / attachments — created up-front in 02 (Reports read them) | n/a | 0 |
+| 07 | `07_reports_schema.sql` | **Reports** — stored procedures ONLY, appended card-by-card, now COMPLETE for all 10 Phase-7 reports (`wmsrpt_soh`, `wmsrpt_txns`, `wmsrpt_expiry`, `wmsrpt_inbound`, `wmsrpt_outbound`, `wmsrpt_variance`, `wmsrpt_utilization`, `wmsrpt_trace_lots/_plates/_events`, `wmsrpt_stockcard`, `wmsrpt_statement`); reads the 01–06 tables (the txn ledger / attachments were created up-front in 02); no new tables | ✅ first-executed on dev 2026-07-06 (soh+txns verified live) — **re-run to deploy the remaining 10 procs** | 0 (12 SPs) |
+| 08 | `08_pwa_foundation_schema.sql` | **PWA Foundation** — the scanner app's action/debug trail (`wmsactionlog`, append-only, idempotent batch ingest via the `(deviceid, entryid)` unique guard; read by the ERP's PWA Activity Log screen) | ⚠ authored 2026-07-06 — NOT yet executed on dev | 1 |
+| 08 | `08_pwa_auth_config.sql` | **PWA token expirations** — ⚠ runs against the **HOST AUTH DB** (adds `PwaAccessTokenExpiration` / `PwaRefreshTokenExpiration` to `[dbo].[ERPGlobalConfigs]`, minutes, NULL→global fallback; seeds 1440/10080), once per environment, NOT per agency | ⚠ authored 2026-07-06 — NOT yet executed | — |
 
 Run order is the numeric order, schema before seed (later sections FK back to Master Data).
 

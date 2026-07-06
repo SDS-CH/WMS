@@ -1,3 +1,7 @@
+
+use IdentityDb
+
+go
 /* ============================================================================
    WMS (3PL) — IDENTITY ROLES SEED  (Role Families + Roles for the WMS module)
    ----------------------------------------------------------------------------
@@ -71,17 +75,22 @@ WHERE r.Name IN (N'Manage Sites', N'Manage Partners', N'Manage Clients',
                  N'RTV Operator', N'Stock Status Manager', N'Stock Adjuster', N'Adjustment Approver',
                  N'Move Operator', N'Transfer Operator', N'Count Operator', N'Count Approver',
                  N'Physical Inventory Manager', N'Repack Operator', N'Returns Operator',
-                 N'Disposal Operator', N'Disposal Approver')
-  AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception', N'WMS - Putaway', N'WMS - Stock Out', N'WMS - Inventory Ops'));
+                 N'Disposal Operator', N'Disposal Approver', N'Report Viewer',
+                 N'PWA Log Viewer', N'Ad-hoc Dispatch')
+  AND (f.Name IS NULL OR f.Name NOT IN (N'WMS - Master Data', N'WMS - Goods Reception', N'WMS - Putaway', N'WMS - Stock Out', N'WMS - Inventory Ops', N'WMS - Reporting', N'WMS - PWA'));
 
 /* ---- 2. Role Families ------------------------------------------------------- */
-DECLARE @fam TABLE (Name NVARCHAR(100), Description NVARCHAR(300));
+-- NVARCHAR(MAX) matches the host columns (RoleFamilies/Roles are MAX); fixed widths
+-- here caused Msg 8152 truncation once descriptions grew past them.
+DECLARE @fam TABLE (Name NVARCHAR(100), Description NVARCHAR(MAX));
 INSERT INTO @fam (Name, Description) VALUES
     (N'WMS - Master Data',      N'WMS warehouse master data administration (sites, partners, clients, products, locations, …)'),
     (N'WMS - Goods Reception',  N'WMS inbound flow (ASN, receiving, inspection, GRN, refusals)'),
     (N'WMS - Putaway',          N'WMS storage flow (directed slotting, placement/splits, pallet decomposition, damage rejects, overflow park)'),
     (N'WMS - Stock Out',        N'WMS outbound flow (outbound orders, allocation, pick/dispatch, express fulfil, delivery notes, RTV)'),
-    (N'WMS - Inventory Ops',    N'WMS in-warehouse stock operations (status management, moves, transfers, counts, physical inventory, adjustments, repack, returns, disposal)');
+    (N'WMS - Inventory Ops',    N'WMS in-warehouse stock operations (status management, moves, transfers, counts, physical inventory, adjustments, repack, returns, disposal)'),
+    (N'WMS - Reporting',        N'WMS read-only reports & visibility (stock on hand, transactions, expiry, inbound/outbound, variance, utilization, traceability, stock card, client statements)'),
+    (N'WMS - PWA',              N'WMS scanner app (PWA) channel administration — activity/debug log, device diagnostics');
 
 INSERT INTO dbo.RoleFamilies (Name, Description, ModuleId)
 SELECT s.Name, s.Description, @moduleId
@@ -91,7 +100,7 @@ WHERE @moduleId IS NOT NULL
 
 /* ---- 3. Roles (source of truth = the cards' 🔐 Privileges sections) ---------
    ▶ Future cards APPEND their new roles to this VALUES list (same guard). */
-DECLARE @rol TABLE (Family NVARCHAR(100), Name NVARCHAR(100), Description NVARCHAR(400));
+DECLARE @rol TABLE (Family NVARCHAR(100), Name NVARCHAR(100), Description NVARCHAR(MAX));
 INSERT INTO @rol (Family, Name, Description) VALUES
     -- WMS - Master Data (one coarse Manage role per story; cards MD-*)
     (N'WMS - Master Data', N'Manage Sites',           N'Create/edit/delete sites, addressing levels and storage areas (Master Data › Site; also covers the Storage-areas section).'),
@@ -117,6 +126,7 @@ INSERT INTO @rol (Family, Name, Description) VALUES
     (N'WMS - Stock Out', N'Dispatch Operator',       N'Run the pick & issue flow — save picks + serials, report damage-at-pick / stock-not-found, and CONFIRM DISPATCH (issue stock out, mint delivery notes; cards SO 10/11/12 endpoints, screen 14 buttons). The pick worklist + pick-detail reads need no role. The single most consequential WMS right — stock leaves the building.'),
     (N'WMS - Stock Out', N'Express Fulfilment',      N'Run the ONE-PASS outbound flow — reserve, pick and dispatch in a single Confirm fulfilment, incl. express damage/not-found (card SO 15 endpoints; screen 16 — the whole menu entry is gated). Mandated as a SEPARATE right (spec CC-10): holding Allocation Operator + Dispatch Operator does NOT include it. Grant narrowly — one unreviewed click issues stock.'),
     (N'WMS - Stock Out', N'RTV Operator',            N'Run the Return-to-Vendor flow — raise RTVs (typed supplier/client destination, eligible available-or-blocked plates), cancel them with a reason, and SHIP & ISSUE the stock out (cards SO 17/18 endpoints; screens 20/21 buttons). The RTV register read needs no role. Distinct from Dispatch Operator — returning stock to a vendor is a different accountability than shipping a customer order.'),
+    (N'WMS - Stock Out', N'Ad-hoc Dispatch',         N'Originate a floor-side EMERGENCY outbound with no prior ERP order — one commit creates the order (flagged ad-hoc + pending back-office approval), issues the stock and mints the delivery note (card SO 24 dispatch endpoint; PWA screen 28 incl. its home tile and entry links). Mandated as a SEPARATE right by the spec (CC-10): holding Dispatch Operator does NOT include it — this right creates orders AND ships in one act. Grant to floor supervisors only. The approval queue actions are gated by Outbound Orders Manager, not this role.'),
     -- WMS - Inventory Ops (cards INV-*)
     (N'WMS - Inventory Ops', N'Stock Status Manager', N'Block/release stock plates — bulk status changes (available ↔ quarantine/hold/damaged/expired, reason-coded; hold release needs the client auth ref) and the expired sweep, incl. releasing live order reservations when blocking reserved plates (card INV 01 endpoints; screen 02 bulk bar + Flag-expired). The stock-status list/history reads need no role. Consequential right — a release makes blocked goods shippable again.'),
     (N'WMS - Inventory Ops', N'Stock Adjuster',       N'Raise stock-correction requests — quantity adjustments (damage/loss/found) and attribute corrections (wrong lot/expiry/serial/product/owning client), reason-coded, landing as PENDING for approval; raising never touches stock (card INV 03 raise endpoint; screen 05 New buttons). The register reads need no role. Kept distinct from Adjustment Approver — CC-07 separation of duties.'),
@@ -129,7 +139,11 @@ INSERT INTO @rol (Family, Name, Description) VALUES
     (N'WMS - Inventory Ops', N'Repack Operator',      N'Confirm stock-conversion jobs — split / merge / repack / re-kit: consume source plates, mint genealogy-carrying outputs, incl. releasing open-order reservations on consumed sources after confirm (card INV 17 confirm endpoint; screen 18 builder). Self-balancing operation, no approval step; the job register read needs no role.'),
     (N'WMS - Inventory Ops', N'Returns Operator',     N'Run the stock re-entry flow — register put-backs / customer returns (flag-driven lot/expiry/serial capture) and PROCESS them line-by-line with dispositions (restock-direct under the shared bin guards / via-Putaway / quarantine / damaged), minting the plates (cards INV 19/20 endpoints; screen 21 buttons). The returns register reads need no role.'),
     (N'WMS - Inventory Ops', N'Disposal Operator',    N'Raise disposal requests — scrap / destroy / write-off of BLOCKED-or-EXPIRED plates only, method-scoped reasons, landing as PENDING; raising never touches stock (card INV 22 raise endpoint; screen 24 form + the Stock Status Dispose hand-offs). The maker half of the CC-07 pair with Disposal Approver.'),
-    (N'WMS - Inventory Ops', N'Disposal Approver',    N'Decide pending disposals — APPROVE & POST (decrements the plate after freeze/released/stale re-validation; TERMINAL ''disposed'' at zero; signed ''dispose'' ledger row) or reject. The raiser can NEVER approve their own request (F13, per user on top of this role). Grant to supervisors only — this right destroys client inventory (card INV 23 endpoints; screen 24 decide buttons).');
+    (N'WMS - Inventory Ops', N'Disposal Approver',    N'Decide pending disposals — APPROVE & POST (decrements the plate after freeze/released/stale re-validation; TERMINAL ''disposed'' at zero; signed ''dispose'' ledger row) or reject. The raiser can NEVER approve their own request (F13, per user on top of this role). Grant to supervisors only — this right destroys client inventory (card INV 23 endpoints; screen 24 decide buttons).'),
+    -- WMS - Reporting (cards RPT-*)
+    (N'WMS - Reporting', N'Report Viewer',            N'Open the WMS Reports menu and run the read-only reports (stock on hand, transactions, expiry, activity, utilization, traceability, statements). DEVIATION from the mutating-only rule: the report READ endpoints carry [Authorize(Roles=...)] — a report exposes cross-client operational data and is not a dropdown source; row-level site/client scope (CC-08) is enforced in the queries on top of this role (cards RPT 01+).'),
+    -- WMS - PWA (cards PWA-*)
+    (N'WMS - PWA', N'PWA Log Viewer',                 N'Open the ERP''s PWA Activity Log screen and read the scanner app''s action/debug trail (who did what, on which device, online or offline, payloads and errors). DEVIATION from the mutating-only rule: the log READ endpoints carry [Authorize(Roles=...)] — the trail exposes every user''s activity and raw request payloads across all clients, a surveillance/debug surface, not a dropdown source (cards PWA 05/06). Device log INGESTION needs no role (any authenticated PWA user writes their own trail; the server stamps the user id from the token).');
 
 INSERT INTO dbo.Roles (Name, Description, FamilyId)
 SELECT s.Name, s.Description, f.Id
@@ -146,7 +160,7 @@ ORDER BY f.Name, r.Name;
 GO
 
 /* ============================================================================
-   END — seeded (idempotent): 5 role families · 32 roles.
+   END — seeded (idempotent): 7 role families · 35 roles.
    NOT seeded: UserRoles/GroupRoles assignments (host admin) · fr-FR translators.
    Applied additions (newest last — append future cards' roles above the summary):
      2026-07-03  initial registry — 10 Master Data roles + ASN Manager + Refuse Delivery
@@ -166,4 +180,7 @@ GO
      2026-07-06  Repack Operator (Repack & Re-kit cards INV 17–18)
      2026-07-06  Returns Operator (Returns & Put-back cards INV 19–21)
      2026-07-06  Disposal Operator + Disposal Approver (Disposal & Scrap cards INV 22–24 — maker-checker pair, CC-07)
+     2026-07-06  family WMS - Reporting + Report Viewer (Stock on Hand cards RPT 01–02 — read endpoints gated, CC-08 scope inside the queries)
+     2026-07-06  family WMS - PWA + PWA Log Viewer (PWA Activity Log cards PWA 05–06 — log reads gated, ingestion role-free)
+     2026-07-06  Ad-hoc Dispatch (Ad-hoc Dispatch cards SO 24/28 — separate right per CC-10; approval actions ride Outbound Orders Manager)
    ============================================================================ */

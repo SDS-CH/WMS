@@ -1,3 +1,5 @@
+use dms_11
+go
 /* ============================================================================
    WMS (3PL) — DATABASE SCHEMA
    SECTION 06: INVENTORY OPERATIONS  —  THE LAST TABLE SET
