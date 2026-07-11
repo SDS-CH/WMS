@@ -24,8 +24,10 @@
      * wmscategory / wmssubcategory  — authored on erp-md-categories.html.
      * wmsconsignee                  — authored on erp-md-consignees.html (needs clients).
      * wmsclient / wmssite / ...      — authored on their own screens.
-   (wmsdefaultsitelevel — the Zone/Aisle/Rack/Bin template seed flagged by the
-    Sites card — is a Sites concern; add it here when that seed is finalised.)
+   ALSO seeded (finalised 2026-07-11 while finishing MD-SITES-SCREEN):
+     * wmsdefaultsitelevel — the Zone/Aisle/Rack/Bin template a NEW site's
+       addressing levels seed from (an empty template made the site editor
+       pre-fill ZERO level rows).
 
    CONVENTIONS
    -----------
@@ -218,9 +220,29 @@ JOIN dbo.wmsreasongroup  g ON g.domainid = d.id AND g.groupkey = s.groupkey
 WHERE NOT EXISTS (SELECT 1 FROM dbo.wmsreason x WHERE x.groupid = g.id AND x.reasontext = s.reasontext);
 GO
 
+/* ----------------------------------------------------------------------------
+   wmsdefaultsitelevel — the DEFAULT addressing template for NEW sites
+   (Zone -> Aisle -> Rack -> Bin), read by the site editor's new-site seed and
+   its "Reset to default" action. Flagged by the Sites cards; finalised
+   2026-07-11 (MD-SITES-SCREEN finish pass — an empty template made a new
+   site's location structure start EMPTY). Idempotent on levelorder
+   (uq_wmsdefaultsitelevel_order).
+   ---------------------------------------------------------------------------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 1)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (1, N'Zone');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 2)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (2, N'Aisle');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 3)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (3, N'Rack');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 4)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (4, N'Bin');
+GO
+
 /* ============================================================================
    END OF MASTER DATA SEED
    ----------------------------------------------------------------------------
+   Seeded: wmsdefaultsitelevel — the 4-level default addressing template
+     (1 Zone · 2 Aisle · 3 Rack · 4 Bin), idempotent on levelorder.
    Seeded: wmsuom — 16 canonical units
      Count(5): EA*, PC, PR, VIAL, DOZ   Weight(2): KG*, G   Volume(2): L*, ML
      Length(2): M*, CM                  Packaging(5): BOX, CTN, CASE, TRAY, PAL

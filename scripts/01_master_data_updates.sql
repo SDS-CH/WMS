@@ -64,9 +64,29 @@ BEGIN
 END
 GO
 
+/* ----------------------------------------------------------------------------
+   2026-07-11 — wmsdefaultsitelevel: seed the Zone/Aisle/Rack/Bin default
+   addressing template (DATA seed, no schema change). The table was created by
+   01_master_data_schema.sql but left EMPTY (its seed was flagged by the Sites
+   cards and never finalised), so a NEW site's location structure pre-filled
+   ZERO level rows in the site editor. Idempotent on levelorder
+   (uq_wmsdefaultsitelevel_order). Same block now lives in
+   01_master_data_seed.sql for fresh installs.
+   ---------------------------------------------------------------------------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 1)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (1, N'Zone');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 2)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (2, N'Aisle');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 3)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (3, N'Rack');
+IF NOT EXISTS (SELECT 1 FROM dbo.wmsdefaultsitelevel WHERE levelorder = 4)
+    INSERT INTO dbo.wmsdefaultsitelevel (levelorder, levelname) VALUES (4, N'Bin');
+GO
+
 /* ============================================================================
    END OF MASTER DATA UPDATES
    ----------------------------------------------------------------------------
    Applied updates (newest last — append new blocks above this footer):
      2026-07-03  wmsproduct.verificationstatus ('verified'|'pending')
+     2026-07-11  wmsdefaultsitelevel Zone/Aisle/Rack/Bin template seed (data)
    ============================================================================ */
