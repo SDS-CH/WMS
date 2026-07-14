@@ -62,6 +62,7 @@ PRINT CONCAT(N'WMS grid identifiers: seeding for ModuleId = ', @moduleId, N'.');
    wms#Location      master-data/location       (Locations grid)     id
    wms#PwaLog        pwa-log                     (PWA activity log)   id
    wms#User          master-data/user           (Users & Roles grid) id
+   wms#Asn           goods-reception/asn        (ASN worklist grid)  id
    Flags mirror the grid component's defaultSettings (multi-select + selectable +
    Excel/PDF export + 10,20,50,100 paging). CanImportXML = 0: WMS uses the dedicated
    CSV Import flow (MD-IMPORT), not per-grid XML import. Tune any row afterwards. */
@@ -78,7 +79,8 @@ PRINT CONCAT(N'WMS grid identifiers: seeding for ModuleId = ', @moduleId, N'.');
         (N'wms#Product',   N'id', N'Product'),
         (N'wms#Location',  N'id', N'Location'),
         (N'wms#PwaLog',    N'id', N'PwaLog'),
-        (N'wms#User',      N'id', N'Users')
+        (N'wms#User',      N'id', N'Users'),
+        (N'wms#Asn',       N'id', N'Asn')
     ) v (GridName, LineIdentifier, ParentTableName)
 )
 INSERT INTO dbo.ERPGridIdentifiers
@@ -99,5 +101,5 @@ WHERE NOT EXISTS (
 
 PRINT CONCAT(N'WMS grid identifiers seeded. wms#* rows now present for module ', @moduleId, N': ',
     (SELECT COUNT(*) FROM dbo.ERPGridIdentifiers
-     WHERE ModuleId = @moduleId AND GridName LIKE N'wms#%'), N' / 12 expected.');
+     WHERE ModuleId = @moduleId AND GridName LIKE N'wms#%'), N' / 13 expected.');
 GO
