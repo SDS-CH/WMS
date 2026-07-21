@@ -65,6 +65,8 @@ PRINT CONCAT(N'WMS grid identifiers: seeding for ModuleId = ', @moduleId, N'.');
    wms#Asn           goods-reception/asn        (ASN worklist grid)  id
    wms#Inspection    goods-reception/inspection (QA worklist grid)   lpnId
    wms#Grn           goods-reception/grn        (GRN list grid)      id
+   wms#Putaway          putaway/tasks (open)    (Putaway worklist grid)   lpnId
+   wms#PutawayCompleted putaway/tasks (done)    (Putaway history grid)    txnId
    Flags mirror the grid component's defaultSettings (multi-select + selectable +
    Excel/PDF export + 10,20,50,100 paging). CanImportXML = 0: WMS uses the dedicated
    CSV Import flow (MD-IMPORT), not per-grid XML import. Tune any row afterwards. */
@@ -84,7 +86,9 @@ PRINT CONCAT(N'WMS grid identifiers: seeding for ModuleId = ', @moduleId, N'.');
         (N'wms#User',      N'id', N'Users'),
         (N'wms#Asn',        N'id',    N'Asn'),
         (N'wms#Inspection', N'lpnId', N'Inspection'),
-        (N'wms#Grn',        N'id',    N'Grn')
+        (N'wms#Grn',        N'id',    N'Grn'),
+        (N'wms#Putaway',          N'lpnId', N'Putaway'),
+        (N'wms#PutawayCompleted', N'txnId', N'PutawayCompleted')
     ) v (GridName, LineIdentifier, ParentTableName)
 )
 INSERT INTO dbo.ERPGridIdentifiers
